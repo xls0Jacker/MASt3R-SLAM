@@ -39,7 +39,7 @@
 
 后续方法 <u><font style="background-color:#FCE75A;">MASt3R</font></u><u>[21] </u>**<u>预测额外的逐像素特征</u>**<u>以改进定位和运动恢复结构的像素匹配[10]</u>。然而与所有先验方法类似，其预测在三维几何中仍可能存在不一致性和相关误差。因此 DUSt3R 和 MASt3R‐SfM 需通过大规模优化确保全局一致性，但时间复杂度无法随图像数量良好扩展。Spann3R[49] 通过微调 DUSt3R 直接将点云图流预测到全局坐标系，从而放弃后端优化，但必须维持有限的 token 内存，这可能导致大场景中的漂移。
 
-<u>在本研究中，我们</u>**<u>构建了一个围绕“双视图三维重建先验”的稠密 SLAM 系统</u>**<u>。</u>**<u>系统仅需通用的中心相机模型</u>**<u>，无需任何内参先验；通过高效的点图匹配、跟踪与融合、回环检测以及全局优化，实时地把成对预测拉成大规模全局一致的稠密地图</u>。
+<u>在本研究中，我们</u>**<u>构建了一个围绕“双视图三维重建先验”的稠密 SLAM 系统。系统仅需通用的中心相机模型</u>**<u>，无需任何内参先验；通过高效的点图匹配、跟踪与融合、回环检测以及全局优化，实时地把成对预测拉成大规模全局一致的稠密地图</u>。
 
 > 总结一下，单视图先验、多视图先验和体积表示存在各自缺陷，但是最新提出的 DUSt3R 利用隐式的双视图三维重建先验规避了如 MVS 或光流多视图先验存在的问题。之前已有将 MASt3R 应用在 SfM 中，因此作者想要做的是将 MASt3R 应用在实时性更高的 SLAM 系统中。
 >
@@ -47,7 +47,7 @@
 ## 创新点归纳
 <font style="color:#DF2A3F;">（创新点归纳）</font>
 
-+ 首个使用双视图三维重建先验<u> </u><u><font style="background-color:#FBDE28;">MASt3R</font></u><u>[21]作为基础的实时 SLAM 系统</u>。
++ 首个使用双视图三维重建先验<u> MASt3R[21]作为基础的实时 SLAM 系统</u>。
 + 用于<u>点云图匹配 (Pointmap Matching)</u>、<u>跟踪与局部融合 (Tracking and Pointmap Fusion)</u>、<u>图构建与闭环检测 (Graph Construction and Loop Closure) </u>、 <u>后端全局优化 (Backend Optimisation) </u>以及<u>重定位 (Relocalisation)</u>的高效技术。
 
 > 基于 MASt3R 去更新 SLAM 中各个组件，括号内容对应后续要说明的章节
@@ -59,10 +59,84 @@
 >
 
 ## Method
-<font style="background-color:#FBDE28;">DUSt3R</font> <u>接收一对图像</u>** **![image](https://cdn.nlark.com/yuque/__latex/faa0531e4ed3019da6c818f372f0f0f9.svg)，并<u>输出三维点图</u>![image](https://cdn.nlark.com/yuque/__latex/48854ae8b17a6e593275d3caa5abb11f.svg)，以及<u>对应的置信度图</u>![image](https://cdn.nlark.com/yuque/__latex/67266430b5067e273bb921bf058efa5d.svg)。在 <font style="background-color:#FBDE28;">MASt3R</font> 中，<u>额外增加了一个头部（head）来输出用于匹配的 d 维特征</u>：![image](https://cdn.nlark.com/yuque/__latex/8dc807a287e14c1eab5c4a759e7794a4.svg)，以及<u>对应的置信度</u>![image](https://cdn.nlark.com/yuque/__latex/feb7fa7ec9cab17e75a1cbcd61d2b659.svg)。我们将![image](https://cdn.nlark.com/yuque/__latex/2f2f1a94082dff05a076ac4b8e4d72de.svg)定义为 MASt3R 的前向传播函数，它输出上述所有内容。
+<u>DUSt3R</u> 接收一对图像** **![image](https://cdn.nlark.com/yuque/__latex/864e19c17f3d060821e5424d78969f3e.svg)，并输出三维点图![image](https://cdn.nlark.com/yuque/__latex/5c1953adbfcde030f8e6d4f154f003dd.svg)，以及对应的置信度图![image](https://cdn.nlark.com/yuque/__latex/67266430b5067e273bb921bf058efa5d.svg)。在 <u>MASt3R</u> 中，额外增加了一个头部（head）来输出用于匹配的 d 维特征：![image](https://cdn.nlark.com/yuque/__latex/8dc807a287e14c1eab5c4a759e7794a4.svg)，以及对应的置信度![image](https://cdn.nlark.com/yuque/__latex/feb7fa7ec9cab17e75a1cbcd61d2b659.svg)。我们将![image](https://cdn.nlark.com/yuque/__latex/16b89b1ef44fa579382389d2d0fe8394.svg)定义为 MASt3R 的前向传播函数，它输出上述所有内容。
 
-> 这里的符号![image](https://cdn.nlark.com/yuque/__latex/971771547bec9ae076532742dda3179c.svg)表示在相机![image](https://cdn.nlark.com/yuque/__latex/036441a335dd85c838f76d63a3db2363.svg)坐标系中表示的图像![image](https://cdn.nlark.com/yuque/__latex/d0b9578de43438ea12df860ab63f3a22.svg)的三维点图。
+> 这里的符号![image](https://cdn.nlark.com/yuque/__latex/7fc0e9ba98bd8abb3ee3e13a189a72ba.svg)表示在相机![image](https://cdn.nlark.com/yuque/__latex/036441a335dd85c838f76d63a3db2363.svg)坐标系中表示的图像![image](https://cdn.nlark.com/yuque/__latex/00eb1ac84cb04ae9942cd8d9cf8ca49f.svg)的三维点图。
 >
+> 根据 MASt3R-SLAM/thirdparty/mast3r/README.md 可知：
+>
+> + 置信度![image](https://cdn.nlark.com/yuque/__latex/3e2f26cc65e9b309efa11c948e05cf2e.svg)<font style="color:rgb(51, 51, 51);background-color:rgb(248, 248, 248);">的取值范围是 [1, +∞)</font>
+>
+
+以下代码是 <u>MASt3R</u> 的输出。其中 X 的维度 (4, B, H, W, 3)，可知，<u>同一图像中像素和三维点的对应关系是已知的</u>。
+
+```python
+# MASt3R-SLAM/mast3r_slam/mast3r_utils.py L82-L115
+# MASt3R模型批量解码函数：为成对图像生成密集的3D点云和特征
+# 输入两张图像的特征，输出每张图像每个像素对应的3D世界坐标
+# NOTE: Assumes img shape the same
+@torch.inference_mode
+def mast3r_decode_symmetric_batch(
+    model, feat_i, pos_i, feat_j, pos_j, shape_i, shape_j
+):
+    # 获取批次大小
+    B = feat_i.shape[0]
+    # 初始化存储4种匹配组合结果的列表
+    # X: 3D点云坐标, C: 置信度, D: 描述符, Q: 描述符置信度
+    X, C, D, Q = [], [], [], []
+
+    # 对批次中的每对图像进行处理
+    for b in range(B):
+        # 提取第b对图像的特征和位置编码
+        feat1 = feat_i[b][None]  # 第一张图像的特征 (1, C, H, W)
+        feat2 = feat_j[b][None]  # 第二张图像的特征 (1, C, H, W)
+        pos1 = pos_i[b][None]    # 第一张图像的位置编码
+        pos2 = pos_j[b][None]    # 第二张图像的位置编码
+
+        # 执行双向推理：图像1→图像2 和 图像2→图像1
+        res11, res21 = decoder(model, feat1, feat2, pos1, pos2, shape_i[b], shape_j[b])
+        res22, res12 = decoder(model, feat2, feat1, pos2, pos1, shape_j[b], shape_i[b])
+
+        # 组织4种匹配组合的结果
+        # res11: 图像1→图像1 (自匹配)
+        # res21: 图像2→图像1 (跨匹配)
+        # res22: 图像2→图像2 (自匹配)
+        # res12: 图像1→图像2 (跨匹配)
+        res = [res11, res21, res22, res12]
+
+        # 从每个推理结果中提取关键输出
+        # r["pts3d"][0]: 3D点云，每个像素有(x,y,z)坐标
+        # r["conf"][0]: 重建置信度
+        # r["desc"][0]: 特征描述符
+        # r["desc_conf"][0]: 描述符置信度
+        Xb, Cb, Db, Qb = zip(
+            *[
+                (r["pts3d"][0], r["conf"][0], r["desc"][0], r["desc_conf"][0])
+                for r in res
+            ]
+        )
+
+        # 将当前批次的4种组合结果堆叠
+        X.append(torch.stack(Xb, dim=0))  # (4, H, W, 3) - 4种组合的3D点云
+        C.append(torch.stack(Cb, dim=0))  # (4, H, W, 1) - 对应的置信度
+        D.append(torch.stack(Db, dim=0))  # (4, H, W, D) - 特征描述符
+        Q.append(torch.stack(Qb, dim=0))  # (4, H, W, 1) - 描述符置信度
+
+    # 将所有批次结果在batch维度上堆叠
+    # 从 (B, 4, H, W, C) 转换为 (4, B, H, W, C)
+    X, C, D, Q = (
+        torch.stack(X, dim=1),  # (4, B, H, W, 3)
+        torch.stack(C, dim=1),  # (4, B, H, W, 1)
+        torch.stack(D, dim=1),  # (4, B, H, W, D)
+        torch.stack(Q, dim=1),  # (4, B, H, W, 1)
+    )
+
+    # 对输出进行下采样以减少计算量
+    X, C, D, Q = downsample(X, C, D, Q)
+
+    # 返回最终结果：X是最重要的输出，包含每个像素的3D世界坐标
+    return X, C, D, Q
+```
 
 在训练 MASt3R 的部分数据有明确尺度单位，如米；但是部分数据没有尺度单位，这就会导致产生<u>尺度不一致</u>性。<u>为了解决这个问题，对位姿使用 </u>![image](https://cdn.nlark.com/yuque/__latex/8d6aeca6316153ebd42b581085ad98fc.svg)<u>进行更新</u>：
 
@@ -70,100 +144,144 @@
 
 其中![image](https://cdn.nlark.com/yuque/__latex/12c3a80ec64f31628bbc037c152c9a04.svg)。
 
-![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1761553228857-112c2e38-3d8c-4def-aef6-234f376798f3.png)
-
 我们对相机模型仅假设为通用中心相机（generic central camera）[35]，即所有光线都通过唯一的相机中心。定义函数：![image](https://cdn.nlark.com/yuque/__latex/9a2d07a64e91b86ded2051e05d00d097.svg)它将点图 ![image](https://cdn.nlark.com/yuque/__latex/b3bf0c71902b7fbb215f74fc408bb6e2.svg) 归一化为单位光线（unit rays），因此每个点图都定义了自身的相机模型。<u>这使得能够以统一的方式处理</u>**<u>时变</u>**<u>相机模型（例如变焦）和</u>**<u>畸变</u>**。
 
 > 时变指基于针孔相机模型的相机内参需要更新的情况，畸变是指畸变参数需要更新的情况。
 >
+> [35] **Why having 10,000 parameters in your camera model is better than twelve**：提出基于中心相机模型进行特征匹配的方法。
+>
 
-### 点云图匹配 (Pointmap Matching)
-
-
-
-
-
-
-
-
-# 项目部署与测试
-## 项目部署
-### 创建环境 && 安装依赖
-```python
-conda create -n mast3r-slam python=3.11
-conda activate mast3r-slam
-```
+##### 这里对参考文献 [35] 射线定义做进一步说明：
+射线![image](https://cdn.nlark.com/yuque/__latex/9a2d07a64e91b86ded2051e05d00d097.svg)可以理解为相机![image](https://cdn.nlark.com/yuque/__latex/2443fbcfeb7e85e1d62b6f5e4f27207e.svg)坐标系下一三维点![image](https://cdn.nlark.com/yuque/__latex/ec98ba941ef051ee8ca999e8282e8f4f.svg)进行 L2 归一化的单位向量，即![image](https://cdn.nlark.com/yuque/__latex/7d222616924d534560ab5531147246eb.svg)。
 
 ```python
-nvcc --version
+# MASt3R-SLAM/mast3r_slam/matching.py L25-L49
+# 为迭代投影匹配算法准备数据的预处理函数
+def prep_for_iter_proj(X11, X21, idx_1_to_2_init):
+    # 获取输入张量的批次大小、高度和宽度
+    b, h, w, _ = X11.shape
+    # 获取张量所在的设备（CPU或GPU）
+    device = X11.device
+
+    # 构建光线图像（归一化后的3D点云）
+    # 对输入的3D点进行L2归一化
+    rays_img = F.normalize(X11, dim=-1)
+    # 重新排列维度为(batch, channels, height, width)格式
+    rays_img = rays_img.permute(0, 3, 1, 2)  # (b,c,h,w)
+    # 计算光线图像的梯度（x和y方向）
+    gx_img, gy_img = img_utils.img_gradient(rays_img)
+    # 将原始光线图像与梯度信息拼接，形成包含梯度的光线图像
+    rays_with_grad_img = torch.cat((rays_img, gx_img, gy_img), dim=1)
+    # 重新排列回(batch, height, width, channels)格式并确保内存连续
+    rays_with_grad_img = rays_with_grad_img.permute(
+        0, 2, 3, 1
+    ).contiguous()  # (b,h,w,c)
+
+    # 准备要投影的3D点
+    # 将第二幅图像的3D点展平为向量形式
+    X21_vec = X21.view(b, -1, 3)
+    # 对3D点进行L2归一化
+    pts3d_norm = F.normalize(X21_vec, dim=-1)
+
+    # 设置投影的初始猜测
+    # 如果没有提供初始索引映射，则使用恒等映射
+    if idx_1_to_2_init is None:
+        # 重置为恒等映射：创建从0到h*w-1的连续索引序列
+        idx_1_to_2_init = torch.arange(h * w, device=device)[None, :].repeat(b, 1)
+    # 将线性索引转换为像素坐标
+    p_init = lin_to_pixel(idx_1_to_2_init, w)
+    # 转换为浮点型以便后续优化
+    p_init = p_init.float()
+
+    # 返回预处理后的数据：光线图像、归一化3D点、初始投影猜测
+    return rays_with_grad_img, pts3d_norm, p_init
 ```
+
+### Pointmap Matching
+_对应关系_是 SLAM 的一个基本组成部分，同时被跟踪和建图所需要。在这种情况下，给定来自 <u>MASt3R</u> 的点云图和特征，我们需要<u>找到两幅图像之间的像素匹配集合</u>，表示为![image](https://cdn.nlark.com/yuque/__latex/66c2c4995a6e8a91572cc3d38b966c1e.svg)。
+
+> _对应关系_：这里的对应关系是指同一相机![image](https://cdn.nlark.com/yuque/__latex/2443fbcfeb7e85e1d62b6f5e4f27207e.svg)坐标下图像![image](https://cdn.nlark.com/yuque/__latex/190a077310286086074db80e583b7e1e.svg)之间像素坐标的对应关系。
+>
+> 针孔相机模型在知道相机内外参的情况下可以直接根据投影公式找到三维点和像素坐标的对应关系。  
+但是 MASt3R 只能获取三维点，无法直接通过投影公式计算像素坐标，后续将说明如何通过迭代得到对应关系。
+>
+
+朴素的暴力匹配具有二次复杂度，因为它是对所有可能的像素对进行全局搜索。为了避免这种情况，<u>DUSt3R</u> 在三维点上使用 k‐d 树；然而，构建过程不易并行化，并且如果点云图预测存在误差，3D 中的最近邻搜索会找到许多不准确的匹配。
+
+在 <u>MASt3R</u> 中，从网络预测了额外的高维特征以实现更宽的基线匹配，并提出了由粗到细方案来处理全局搜索。然而，密集像素匹配的运行时间在秒级，而稀疏匹配仍然比 k‐d 树慢。
+
+<u>我们不是专注于高效方法进行全局匹配搜索，而是从优化作为局部搜索中寻找灵感</u>。
+
+与特征匹配相比，我们受到密集 SLAM 中常用的投影数据关联方法的启发。然而，这需要具有闭式投影的参数化相机模型，而我们的<u>唯一假设是每帧具有唯一的相机中心</u>（中心相机模型）。给定输出点云图![image](https://cdn.nlark.com/yuque/__latex/f1e532d342cf994ee61388fa8ef3745c.svg) ,我们可以利用光线![image](https://cdn.nlark.com/yuque/__latex/9a2d07a64e91b86ded2051e05d00d097.svg)构建![image](https://cdn.nlark.com/yuque/__latex/4cc47a8bde7499b3333b451c922a5640.svg)的通用相机模型。受缺乏闭式投影的通用相机校准方法 [32, 35] 的启发，我们通过迭代优化参考帧中的像素坐标![image](https://cdn.nlark.com/yuque/__latex/8f4b562467978432828ee0e9ebaf90b3.svg)来独立投影每个点![image](https://cdn.nlark.com/yuque/__latex/307520fb8ac92217d54cc372c7318025.svg)，以最小化射线误差：
+
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1761706504716-4450df48-0705-4ac9-bb2f-7267279ff9b6.png)
+
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1761553228857-112c2e38-3d8c-4def-aef6-234f376798f3.png)
+
+**图 2**. 迭代投影匹配概述：给定 <u>MASt3R</u> 生成的两个点云图预测，参考点云图经归一化![image](https://cdn.nlark.com/yuque/__latex/9a2d07a64e91b86ded2051e05d00d097.svg)获得平滑的像素到射线映射。对于点云图![image](https://cdn.nlark.com/yuque/__latex/d6a4771738f5b76b3397a5b04321af2f.svg)中三维点![image](https://cdn.nlark.com/yuque/__latex/2adf48e1cf80858f0604d2b51eeed4b8.svg)的初始投影估计值![image](https://cdn.nlark.com/yuque/__latex/489b5eb4a753c39916bf7b3ca484ee35.svg)，通过迭代更新像素以最小化查询射线![image](https://cdn.nlark.com/yuque/__latex/50a4d21310a46a8359e2464f22c6a0b0.svg)与目标射线![image](https://cdn.nlark.com/yuque/__latex/bfb2c4a16636d3c92c6d49fbc7bda0f3.svg)之间的角度误差![image](https://cdn.nlark.com/yuque/__latex/ed5a4aa5e092e303a69c608582c70db9.svg)。当找到实现最小误差的像素![image](https://cdn.nlark.com/yuque/__latex/4be2e96825512ded115f9cecd2bbef00.svg)后，即建立![image](https://cdn.nlark.com/yuque/__latex/00eb1ac84cb04ae9942cd8d9cf8ca49f.svg)与![image](https://cdn.nlark.com/yuque/__latex/dd46b6b1182d153c71fddc2d06311ca0.svg)间的像素对应关系。
+
+> 将图 2 分为三个部分，分别用 2.x 进行表示：
+>
+> 图 2.1 为图像![image](https://cdn.nlark.com/yuque/__latex/00eb1ac84cb04ae9942cd8d9cf8ca49f.svg)：相机![image](https://cdn.nlark.com/yuque/__latex/2443fbcfeb7e85e1d62b6f5e4f27207e.svg)坐标系下图像![image](https://cdn.nlark.com/yuque/__latex/00eb1ac84cb04ae9942cd8d9cf8ca49f.svg)中像素从初始位置![image](https://cdn.nlark.com/yuque/__latex/489b5eb4a753c39916bf7b3ca484ee35.svg)迭代到最终位置![image](https://cdn.nlark.com/yuque/__latex/4be2e96825512ded115f9cecd2bbef00.svg)的过程。彩色背景代表了图像![image](https://cdn.nlark.com/yuque/__latex/00eb1ac84cb04ae9942cd8d9cf8ca49f.svg)中像素的射线场，表明各个像素对应的单位射线方向。
+>
+> 图 2.2 为示意图：它是进行匹配计算的核心视图，展示了需要最小化的角度差异![image](https://cdn.nlark.com/yuque/__latex/ed5a4aa5e092e303a69c608582c70db9.svg)，以及两条关键射线：目标射线 ![image](https://cdn.nlark.com/yuque/__latex/bfb2c4a16636d3c92c6d49fbc7bda0f3.svg) 和查询射线 ![image](https://cdn.nlark.com/yuque/__latex/9e8268fb6fe0a7e2ebe866c5e04bbf66.svg)。
+>
+> 图 2.3 为图像![image](https://cdn.nlark.com/yuque/__latex/dd46b6b1182d153c71fddc2d06311ca0.svg)：表示目标图像![image](https://cdn.nlark.com/yuque/__latex/dd46b6b1182d153c71fddc2d06311ca0.svg)的实际外观。 它用虚线箭头连接到中间的视图，指明了匹配的最终目标图像。
+>
+
+图 2 展示以上过程，需注意的是最小化归一化向量间的欧几里得距离等价于最小化两条归一化光线间的夹角：
+
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762152397405-21b62233-7ada-4202-aceb-808de73d6c5c.png)
 
 ```python
-# CUDA 11.8
-conda install pytorch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1  pytorch-cuda=11.8 -c pytorch -c nvidia
-# CUDA 12.1
-conda install pytorch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 pytorch-cuda=12.1 -c pytorch -c nvidia
-# CUDA 12.4
-conda install pytorch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 pytorch-cuda=12.4 -c pytorch -c nvidia
+# MASt3R-SLAM/mast3r_slam/backend/src/matching_kernels.cu L193-L198
+    // ===== 第三步：计算残差和代价函数 =====
+    // 计算归一化射线与目标3D点方向的差值（残差）
+    #pragma unroll
+    for (int j=0; j<3; j++) {
+      err[j] = r[j] - pts_3d_norm[b][n][j];
+    }
+    // 计算代价函数（残差平方和）
+    float cost = err[0]*err[0] + err[1]*err[1] + err[2]*err[2];
 ```
+
+> 从代码来看，实际上仍以![image](https://cdn.nlark.com/yuque/__latex/1b14e76199740469c36a175c6053c7a7.svg)作为代价函数，这里提出角度只是方便理解代价结果，如：
+>
+> cost = 0：两个向量完全平行（cosθ = 1），完美匹配
+>
+> cost = 2：两个向量完全相反（cosθ = -1），最差匹配
+>
+
+通过使用与 [35]，相似的非线性最小二乘形式，我们可以通过计算解析雅可比矩阵并使用 LevenbergMarquardt 方法求解,迭代地解出投影位置的更新量。这可以针对每个点单独进行，并且由于射线图像是平滑的，几乎所有的有效像素在 10 次迭代内收敛。在此过程结束时, 我们现在得到初始匹配![image](https://cdn.nlark.com/yuque/__latex/3c9351549e89937570459de1ecd5afe6.svg)。当没有投影![image](https://cdn.nlark.com/yuque/__latex/8f4b562467978432828ee0e9ebaf90b3.svg)的初始估计值时，例如在与新关键帧进行跟踪或匹配闭环边时，所有像素都通过_恒等映射_进行初始化。
 
 ```python
-git clone https://github.com/rmurai0610/MASt3R-SLAM.git --recursive
-cd MASt3R-SLAM/
-
-# 服务器docker环境无法翻墙，可考虑先在本地下载后将文件传输过去
-
-pip install -e thirdparty/mast3r
-pip install -e thirdparty/in3d
-pip install --no-build-isolation -e .
- 
-
-# Optionally install torchcodec for faster mp4 loading
-pip install torchcodec==0.1
+# MASt3R-SLAM/mast3r_slam/matching.py L25-L49
+    # 设置投影的初始猜测
+    # 如果没有提供初始索引映射，则使用恒等映射
+    if idx_1_to_2_init is None:
+        # 重置为恒等映射：创建从0到h*w-1的连续索引序列
+        idx_1_to_2_init = torch.arange(h * w, device=device)[None, :].repeat(b, 1)
+    # 将线性索引转换为像素坐标
+    p_init = lin_to_pixel(idx_1_to_2_init, w)
+    # 转换为浮点型以便后续优化
+    p_init = p_init.float()
 ```
 
-这一步 pip install --no-build-isolation -e . 中有 "lietorch @ git+[https://github.com/princeton-vl/lietorch.git"](https://github.com/princeton-vl/lietorch.git")，由于 Docker 环境无法翻墙，需要源码安装 lietorch：  
-**Step1 下载源码**：[https://github.com/princeton-vl/lietorch](https://github.com/princeton-vl/lietorch)，存放位置不指定，只需要 conda 环境正确即可
+> _恒等映射_：假设图像![image](https://cdn.nlark.com/yuque/__latex/190a077310286086074db80e583b7e1e.svg)中像素一一对应进行初始化。这里 idx_1_to_2_init 重置为恒等映射得到的形状为 (b, h*w)，其中 b 为 batch_size，h*w 为像素数目，即每一组数值为 [0, 1, ..., h*w - 1]，共 b 组。
+>
 
-**Step2 安装 lietorch 所需依赖**：
+<u>该特征匹配结果不受位姿估计值影响，因其完全依赖 MASt3R输出</u>。
 
-```python
-# install requirements（前面安装过可以跳过）
-pip install torch torchvision torchaudio wheel
+---
 
-# optional: specify GPU architectures
-export TORCH_CUDA_ARCH_LIST="7.5;8.6;8.9;9.0"
+### Tracking and Pointmap Fusion
+SLAM 的一个关键组成部分是对当前帧位姿相对于地图的低延迟跟踪。<u>作为一个基于关键帧的系统，我们估计当前帧</u>![image](https://cdn.nlark.com/yuque/__latex/a9f5f4fbe7a963704dbe10de8eb3cea9.svg)<u> 和上一个关键帧</u>![image](https://cdn.nlark.com/yuque/__latex/8e3898d751a1e64c54ce94f58eb22a9f.svg)<u>之间的相对变换</u>![image](https://cdn.nlark.com/yuque/__latex/bded59ae244ebb0474740d71459ca117.svg)。为了提高效率，我们希望只使用网络的一次前向传播来估计变换。假设我们已经有了上一个关键帧的点云图估计![image](https://cdn.nlark.com/yuque/__latex/06726241030eac7975bcd9f72ce05a0a.svg)，我们需要![image](https://cdn.nlark.com/yuque/__latex/9d14f891459cea2a1fed5f6c526b4e35.svg)帧中的点来求解![image](https://cdn.nlark.com/yuque/__latex/bded59ae244ebb0474740d71459ca117.svg)。这些点可以通过![image](https://cdn.nlark.com/yuque/__latex/3b94c122bf66351019bbdbebeba3e799.svg)获得。求解位姿的一种直接方法是最小化 3D 点误差：
 
-# install lietorch
-pip install --no-build-isolation .
-```
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762152838780-9bb0ac42-3252-444d-a1a7-fb1ef7469169.png)
 
-**Step3 重新运行指令**：运行之前需要将 "lietorch @ git+[https://github.com/princeton-vl/lietorch.git"](https://github.com/princeton-vl/lietorch.git") 这一行注释掉。
+其中![image](https://cdn.nlark.com/yuque/__latex/5669fd5094029e35831ff96496cf46bf.svg)是 <u>MASt3R-SfM [10]</u> 中提出的匹配置信度权重。为了提高鲁棒性，除了 Huber 范数![image](https://cdn.nlark.com/yuque/__latex/8fda43aaae04e025c40c78d86c0a4295.svg)之外，还应用了基于匹配的权重：
 
-```python
-pip install --no-build-isolation -e . 
-```
-
-```python
-mkdir -p checkpoints/
-wget https://download.europe.naverlabs.com/ComputerVision/MASt3R/MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric.pth -P checkpoints/
-wget https://download.europe.naverlabs.com/ComputerVision/MASt3R/MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric_retrieval_trainingfree.pth -P checkpoints/
-wget https://download.europe.naverlabs.com/ComputerVision/MASt3R/MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric_retrieval_codebook.pkl -P checkpoints/
-```
-
-## 数据集下载
-scripts 里面的 bash 脚本链接过时，需到官网手动下载，以 TUM RGBD 为例：
-
-在官网 [https://cvg.cit.tum.de/data/datasets/rgbd-dataset/download](https://cvg.cit.tum.de/data/datasets/rgbd-dataset/download) 下载 scripts/download_tum.sh 中所需数据集并解压，注意保持路径为 datasets/tum
-
-# 论文公式对应代码
-![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1761559754019-b06d291d-ff32-43ca-b0e9-87c518da39c8.png)
-
-```python
-
-```
-
-![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1761272569124-5612d316-9299-4584-be5a-d37718120a32.png)
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762152911660-8d4466aa-9c2d-42cc-9677-25ed92aa6f04.png)
 
 ```python
 # MASt3R-SLAM/mast3r_slam/backend/src/gn_kernels.cu L813-L1140
@@ -176,10 +294,10 @@ scripts 里面的 bash 脚本链接过时，需到官网手动下载，以 TUM R
  * @param jj 边的终止节点索引 [num_edges]
  * @param idx_ii2_jj 从j到i的匹配索引 [num_edges, num_points]
  * @param valid_match 匹配有效性标志 [num_edges, num_points, 1]
- * @param Q 匹配质量分数 [num_edges, num_points, 1]
+ * @param Q 匹配质量分数 [num_edges, num_points, 1] <- 这里 Q 对应 q_{m,n}
  * @param Hs 输出Hessian块矩阵 [4, num_edges, 7, 7]
  * @param gs 输出梯度向量 [2, num_edges, 7]
- * @param sigma_point 点距离的标准差（信息矩阵权重）
+ * @param sigma_point 点距离的标准差（信息矩阵权重）<- 对应 sigma^2，默认值 0.05
  * @param C_thresh 置信度阈值
  * @param Q_thresh 匹配质量阈值
  * 
@@ -240,7 +358,8 @@ __global__ void point_align_kernel(
  
   // 计算相对位姿 Tij = Ti^(-1) * Tj
   if (thread_id == 0) {
-    relSim3(ti, qi, si, tj, qj, sj, tij, qij, sij);
+    relSim3(ti, qi, si, tj, qj, sj, tij, qij, sij); // <- 获取相对位姿 Tij
+                                                    // 这里三个量对应 平移、旋转、缩放
   }
  
   __syncthreads();
@@ -304,7 +423,7 @@ __global__ void point_align_kernel(
     // 将点Xj变换到相机i的坐标系：Xj_Ci = Tij * Xj
     actSim3(tij, qij, sij, Xj, Xj_Ci);
  
-    // 计算残差（点之间的3D差异）
+    // 计算残差（点之间的3D差异）// <- 计算残差 err
     err[0] = Xj_Ci[0] - Xi[0];
     err[1] = Xj_Ci[1] - Xi[1];
     err[2] = Xj_Ci[2] - Xi[2];
@@ -315,23 +434,24 @@ __global__ void point_align_kernel(
     const float cj = Cs[jx][k][0];  // 点j的置信度
     const bool valid = 
       valid_match_ind
-      & (q > Q_thresh)
-      & (ci > C_thresh)
+      & (q > Q_thresh) # Q_thresh = 1.5
+      & (ci > C_thresh) # C_thresh = 0
       & (cj > C_thresh);
 
     // 使用置信度加权
-    const float conf_weight = q;
+    const float conf_weight = q; // <- q_{m,n}
     // const float conf_weight = q * ci * cj;  // 可选：使用所有置信度的乘积
     
-    // 计算sqrt(weight)，用于鲁棒核函数
+    // 计算sqrt(weight)，用于鲁棒核函数 // <- q_{m,n} / sigma^2
     const float sqrt_w_point = valid ? sigma_point_inv * sqrtf(conf_weight) : 0;
  
-    // 应用Huber鲁棒权重
+    // 应用Huber鲁棒权重 // <- huber(q_{m,n} * err / sigma^2)
     w[0] = huber(sqrt_w_point * err[0]);
     w[1] = huber(sqrt_w_point * err[1]);
     w[2] = huber(sqrt_w_point * err[2]);
     
     // 将sigma权重加回（完整权重 = sigma^2 * Huber权重）
+    // <- 这一步是为了方便后续雅可比矩阵计算，实际上公式上一步就结束了？？？
     const float w_const_point = sqrt_w_point * sqrt_w_point;
     w[0] *= w_const_point;
     w[1] *= w_const_point;
@@ -483,123 +603,18 @@ __global__ void point_align_kernel(
 
 ```
 
-```python
-# MASt3R-SLAM/mast3r_slam/backend/src/gn_kernels.cu L1140-L1228
-/**
- * @brief 基于点对点匹配的Gauss-Newton优化（CUDA实现）
- * @param Twc 相机位姿 [num_poses, 8]
- * @param Xs 3D点坐标 [num_poses, num_points, 3]
- * @param Cs 置信度 [num_poses, num_points, 1]
- * @param ii 边的起始节点索引
- * @param jj 边的终止节点索引
- * @param idx_ii2jj 匹配索引
- * @param valid_match 匹配有效性
- * @param Q 匹配质量
- * @param sigma_point 点距离标准差
- * @param C_thresh 置信度阈值
- * @param Q_thresh 质量阈值
- * @param max_iter 最大迭代次数
- * @param delta_thresh 收敛阈值
- * @return 最后一次迭代的增量（用于调试）
- * 
- * 迭代优化相机位姿，最小化点对点的3D距离
- */
-std::vector<torch::Tensor> gauss_newton_points_cuda(
-  torch::Tensor Twc, torch::Tensor Xs, torch::Tensor Cs,
-  torch::Tensor ii, torch::Tensor jj, 
-  torch::Tensor idx_ii2jj, torch::Tensor valid_match,
-  torch::Tensor Q,
-  const float sigma_point,
-  const float C_thresh,
-  const float Q_thresh,
-  const int max_iter,
-  const float delta_thresh)
-{
-  auto opts = Twc.options();  // 获取tensor的设备和类型选项
-  const int num_edges = ii.size(0);  // 边数量
-  const int num_poses = Xs.size(0);  // 位姿数量
-  const int n = Xs.size(1);  // 点数量
+尽管 3D 点误差是合适的，但它很容易受到 _点云图预测误差 _的影响，因为<u>深度预测不一致</u>的情况相对频繁。 鉴于我们最终将所有预测融合到一个单独的点云图中取平均，跟踪中的误差会降低关键帧点云图的质量，而这些点云图也会在后端使用。
 
-  const int num_fix = 1;  // 固定的位姿数量（通常是第一帧）
+> _点云图预测误差_：这里是指 <u>MASt3R</u> 输出点云图![image](https://cdn.nlark.com/yuque/__latex/f1e532d342cf994ee61388fa8ef3745c.svg)产生的误差，这是由于 <u>MASt3R</u>  的点图预测（尤其深度估计）在不同帧中可能不一致。
+>
 
-  // 设置索引
-  torch::Tensor unique_kf_idx = get_unique_kf_idx(ii, jj);  // 获取所有唯一的关键帧索引
-  // 用于边构建的索引
-  std::vector<torch::Tensor> inds = create_inds(unique_kf_idx, 0, ii, jj);
-  torch::Tensor ii_edge = inds[0];
-  torch::Tensor jj_edge = inds[1];
-  // 用于线性系统索引（固定第一帧）
-  std::vector<torch::Tensor> inds_opt = create_inds(unique_kf_idx, num_fix, ii, jj);
-  torch::Tensor ii_opt = inds_opt[0];
-  torch::Tensor jj_opt = inds_opt[1];
+通过再次利用点云图预测可以在中心相机假设下转换为射线的特性，我们可以计算方向射线误差（directional ray error）来代替，<u>这种误差对不正确的深度预测不那么敏感</u>。为了计算这个误差，我们简单地将公式 (4) 中的两点都进行归一化：     
 
-  const int pose_dim = 7;  // Sim(3)的维度
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762153223560-5350cafe-d015-4b92-848c-9906c4f8ed8f.png)
 
-  // 初始化缓冲区
-  torch::Tensor Hs = torch::zeros({4, num_edges, pose_dim, pose_dim}, opts);  // Hessian块矩阵
-  torch::Tensor gs = torch::zeros({2, num_edges, pose_dim}, opts);  // 梯度向量
+这导致了一个类似于公式 (3) 中提到的、并在图 2 中所示的角度误差，不同之处在于我们现在拥有许多已知的对应关系，并希望找到能最小化规范射线与当前帧对应预测射线之间所有角度误差的位姿。
 
-  // 用于调试输出
-  torch::Tensor dx;
-
-  torch::Tensor delta_norm;  // 增量范数
-
-  // Gauss-Newton迭代
-  for (int itr=0; itr<max_iter; itr++) {
-
-    // 调用kernel计算Hessian和梯度
-    point_align_kernel<<<num_edges, THREADS>>>(
-      Twc.packed_accessor32<float,2,torch::RestrictPtrTraits>(),
-      Xs.packed_accessor32<float,3,torch::RestrictPtrTraits>(),
-      Cs.packed_accessor32<float,3,torch::RestrictPtrTraits>(),
-      ii_edge.packed_accessor32<long,1,torch::RestrictPtrTraits>(),
-      jj_edge.packed_accessor32<long,1,torch::RestrictPtrTraits>(),
-      idx_ii2jj.packed_accessor32<long,2,torch::RestrictPtrTraits>(),
-      valid_match.packed_accessor32<bool,3,torch::RestrictPtrTraits>(),
-      Q.packed_accessor32<float,3,torch::RestrictPtrTraits>(),
-      Hs.packed_accessor32<float,4,torch::RestrictPtrTraits>(),
-      gs.packed_accessor32<float,3,torch::RestrictPtrTraits>(),
-      sigma_point, C_thresh, Q_thresh
-    );
-
-
-    // 构建稀疏线性系统：位姿×位姿块
-    SparseBlock A(num_poses - num_fix, pose_dim);
-
-    // 更新Hessian矩阵（左端项）
-    A.update_lhs(Hs.reshape({-1, pose_dim, pose_dim}), 
-        torch::cat({ii_opt, ii_opt, jj_opt, jj_opt}), 
-        torch::cat({ii_opt, jj_opt, ii_opt, jj_opt}));
-
-    // 更新梯度向量（右端项）
-    A.update_rhs(gs.reshape({-1, pose_dim}), 
-        torch::cat({ii_opt, jj_opt}));
-
-    // 求解线性系统：A*dx = -b
-    // 注意：这里考虑了负号，因为求解的是下降方向
-    dx = -A.solve();
-    
-    // 在Sim(3)流形上应用增量
-    pose_retr_kernel<<<1, THREADS>>>(
-      Twc.packed_accessor32<float,2,torch::RestrictPtrTraits>(),
-      dx.packed_accessor32<float,2,torch::RestrictPtrTraits>(),
-      num_fix);
-
-    // 检查终止条件
-    // 需要指定第二个参数，否则函数调用会有歧义
-    delta_norm = torch::linalg::linalg_norm(dx, std::optional<c10::Scalar>(), {}, false, {});
-    if (delta_norm.item<float>() < delta_thresh) {
-      break;  // 增量足够小，收敛
-    }
-        
-
-  }
-
-  return {dx};  // 返回最后一次迭代的增量（用于调试）
-}
-```
-
-![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1761275583865-be6d85e6-3468-4bc5-9834-dc5114f2c56e.png)
+鉴于角度误差是有界的，基于射线的误差对于离群点具有鲁棒性。<u>我们还包含了一个误差项，它带有较小的权重，用于计算点到相机中心距离的差异。</u>这可以防止系统在纯旋转下退化，同时避免深度误差带来的显著偏差。
 
 ```python
 # MASt3R-SLAM/mast3r_slam/backend/src/gn_kernels.cu L455-L723
@@ -747,7 +762,7 @@ __global__ void ray_align_kernel(
     
     // 归一化射线：ri = Xi / ||Xi||
     float ri[3];
-    for (int i=0; i<3; i++) ri[i] = norm1_i_inv * Xi[i];
+    for (int i=0; i<3; i++) ri[i] = norm1_i_inv * Xi[i]; // <- 计算 Xi 的归一化射线 ri
  
     // 将点Xj变换到相机i的坐标系
     actSim3(tij, qij, sij, Xj, Xj_Ci);
@@ -757,15 +772,15 @@ __global__ void ray_align_kernel(
     const float norm1_j = sqrtf(norm2_j);  // ||Xj_Ci||
     const float norm1_j_inv = 1.0/norm1_j;
 
-    // 归一化预测射线：rj_Ci = Xj_Ci / ||Xj_Ci||
+    // 归一化预测射线：rj_Ci = Xj_Ci / ||Xj_Ci|| 
     float rj_Ci[3];
-    for (int i=0; i<3; i++) rj_Ci[i] = norm1_j_inv * Xj_Ci[i];
+    for (int i=0; i<3; i++) rj_Ci[i] = norm1_j_inv * Xj_Ci[i]; // <- 计算 Xj_Ci 的归一化射线 rj_Ci
  
-    // 计算残差（射线方向差异 + 距离差异）
+    // 计算残差（射线方向差异 + 距离差异）<- 计算残差 err
     err[0] = rj_Ci[0] - ri[0];  // x方向射线误差
     err[1] = rj_Ci[1] - ri[1];  // y方向射线误差
     err[2] = rj_Ci[2] - ri[2];  // z方向射线误差
-    err[3] = norm1_j - norm1_i;  // 距离误差
+    err[3] = norm1_j - norm1_i;  // 距离误差 <- 引入的基于 距离 的误差项
  
     // 计算权重
     const float q = Q[block_id][k][0];  // 匹配质量
@@ -974,6 +989,126 @@ __global__ void ray_align_kernel(
 }
 ```
 
+我们在迭代重加权最小二乘（IRLS）框架中，使用<u>高斯-牛顿法</u>有效地求解位姿的更新。我们计算射线和距离误差关于相对位姿![image](https://cdn.nlark.com/yuque/__latex/bded59ae244ebb0474740d71459ca117.svg)的微扰![image](https://cdn.nlark.com/yuque/__latex/e7ccb9bf589e539415d2ed8b202fb932.svg)的解析雅可比矩阵。我们将残差![image](https://cdn.nlark.com/yuque/__latex/48463facf2e6bdd4218e7c2352e13a54.svg)、雅可比矩阵![image](https://cdn.nlark.com/yuque/__latex/c7d4a415e25716066a99bbd38864d63f.svg)和权重 ![image](https://cdn.nlark.com/yuque/__latex/dc10020247da5f8307363dbc8d72fdc8.svg)堆叠到相应的矩阵中，并迭代地求解线性系统并更新位姿：
+
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762153310828-dde00d5a-0ac6-4523-a26a-4be6ff8039f7.png)
+
+```python
+# MASt3R-SLAM/mast3r_slam/backend/src/gn_kernels.cu L1140-L1228
+/**
+ * @brief 基于点对点匹配的Gauss-Newton优化（CUDA实现）
+ * @param Twc 相机位姿 [num_poses, 8]
+ * @param Xs 3D点坐标 [num_poses, num_points, 3]
+ * @param Cs 置信度 [num_poses, num_points, 1]
+ * @param ii 边的起始节点索引
+ * @param jj 边的终止节点索引
+ * @param idx_ii2jj 匹配索引
+ * @param valid_match 匹配有效性
+ * @param Q 匹配质量
+ * @param sigma_point 点距离标准差
+ * @param C_thresh 置信度阈值
+ * @param Q_thresh 质量阈值
+ * @param max_iter 最大迭代次数
+ * @param delta_thresh 收敛阈值
+ * @return 最后一次迭代的增量（用于调试）
+ * 
+ * 迭代优化相机位姿，最小化点对点的3D距离
+ */
+std::vector<torch::Tensor> gauss_newton_points_cuda(
+  torch::Tensor Twc, torch::Tensor Xs, torch::Tensor Cs,
+  torch::Tensor ii, torch::Tensor jj, 
+  torch::Tensor idx_ii2jj, torch::Tensor valid_match,
+  torch::Tensor Q,
+  const float sigma_point,
+  const float C_thresh,
+  const float Q_thresh,
+  const int max_iter,
+  const float delta_thresh)
+{
+  auto opts = Twc.options();  // 获取tensor的设备和类型选项
+  const int num_edges = ii.size(0);  // 边数量
+  const int num_poses = Xs.size(0);  // 位姿数量
+  const int n = Xs.size(1);  // 点数量
+
+  const int num_fix = 1;  // 固定的位姿数量（通常是第一帧）
+
+  // 设置索引
+  torch::Tensor unique_kf_idx = get_unique_kf_idx(ii, jj);  // 获取所有唯一的关键帧索引
+  // 用于边构建的索引
+  std::vector<torch::Tensor> inds = create_inds(unique_kf_idx, 0, ii, jj);
+  torch::Tensor ii_edge = inds[0];
+  torch::Tensor jj_edge = inds[1];
+  // 用于线性系统索引（固定第一帧）
+  std::vector<torch::Tensor> inds_opt = create_inds(unique_kf_idx, num_fix, ii, jj);
+  torch::Tensor ii_opt = inds_opt[0];
+  torch::Tensor jj_opt = inds_opt[1];
+
+  const int pose_dim = 7;  // Sim(3)的维度
+
+  // 初始化缓冲区
+  torch::Tensor Hs = torch::zeros({4, num_edges, pose_dim, pose_dim}, opts);  // Hessian块矩阵
+  torch::Tensor gs = torch::zeros({2, num_edges, pose_dim}, opts);  // 梯度向量
+
+  // 用于调试输出
+  torch::Tensor dx;
+
+  torch::Tensor delta_norm;  // 增量范数
+
+  // Gauss-Newton迭代
+  for (int itr=0; itr<max_iter; itr++) {
+
+    // 调用kernel计算Hessian和梯度
+    point_align_kernel<<<num_edges, THREADS>>>(
+      Twc.packed_accessor32<float,2,torch::RestrictPtrTraits>(),
+      Xs.packed_accessor32<float,3,torch::RestrictPtrTraits>(),
+      Cs.packed_accessor32<float,3,torch::RestrictPtrTraits>(),
+      ii_edge.packed_accessor32<long,1,torch::RestrictPtrTraits>(),
+      jj_edge.packed_accessor32<long,1,torch::RestrictPtrTraits>(),
+      idx_ii2jj.packed_accessor32<long,2,torch::RestrictPtrTraits>(),
+      valid_match.packed_accessor32<bool,3,torch::RestrictPtrTraits>(),
+      Q.packed_accessor32<float,3,torch::RestrictPtrTraits>(),
+      Hs.packed_accessor32<float,4,torch::RestrictPtrTraits>(),
+      gs.packed_accessor32<float,3,torch::RestrictPtrTraits>(),
+      sigma_point, C_thresh, Q_thresh
+    );
+
+
+    // 构建稀疏线性系统：位姿×位姿块
+    SparseBlock A(num_poses - num_fix, pose_dim);
+
+    // 更新Hessian矩阵（左端项）
+    A.update_lhs(Hs.reshape({-1, pose_dim, pose_dim}), 
+        torch::cat({ii_opt, ii_opt, jj_opt, jj_opt}), 
+        torch::cat({ii_opt, jj_opt, ii_opt, jj_opt}));
+
+    // 更新梯度向量（右端项）
+    A.update_rhs(gs.reshape({-1, pose_dim}), 
+        torch::cat({ii_opt, jj_opt}));
+
+    // 求解线性系统：A*dx = -b
+    // 注意：这里考虑了负号，因为求解的是下降方向
+    dx = -A.solve();
+    
+    // 在Sim(3)流形上应用增量
+    pose_retr_kernel<<<1, THREADS>>>(
+      Twc.packed_accessor32<float,2,torch::RestrictPtrTraits>(),
+      dx.packed_accessor32<float,2,torch::RestrictPtrTraits>(),
+      num_fix);
+
+    // 检查终止条件
+    // 需要指定第二个参数，否则函数调用会有歧义
+    delta_norm = torch::linalg::linalg_norm(dx, std::optional<c10::Scalar>(), {}, false, {});
+    if (delta_norm.item<float>() < delta_thresh) {
+      break;  // 增量足够小，收敛
+    }
+        
+
+  }
+
+  return {dx};  // 返回最后一次迭代的增量（用于调试）
+}
+```
+
 ```python
 # MASt3R-SLAM/mast3r_slam/backend/src/gn_kernels.cu L725-L811
 /**
@@ -1088,7 +1223,290 @@ std::vector<torch::Tensor> gauss_newton_rays_cuda(
 
 ```
 
-![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1761276026051-4ac77389-617f-41de-9352-f996cb1d2a88.png)（已知标定）
+由于每个点云图都可能提供有价值的新信息，我们利用这一点，不仅对几何估计进行滤波，还对相机模型本身进行滤波，因为它是由射线定义的。在求解出相对位姿后，我们可以使用变换![image](https://cdn.nlark.com/yuque/__latex/bded59ae244ebb0474740d71459ca117.svg)并通过运行 <u>加权平均滤波器</u>（running weighted average filter）更新规范点云图![image](https://cdn.nlark.com/yuque/__latex/1949fc953c4e93dc18b1de80cfe04cdc.svg)：
+
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762153390684-63208b8c-b419-4f16-bd76-1608bad4ad17.png)
+
+点云图最初由于只使用了_小基线（small baseline）_帧而具有较大的误差和较低的置信度，但滤波会融合来自多个视点的信息。我们试验了不同的更新规范点云图的方法，<u>发现加权平均最适合在滤除噪声的同时保持一致性</u>。与 MASt3R-SfM [10] 中的规范点云图相比，我们以增量方式计算此结果，并且需要对点进行变换，因为额外的网络预测![image](https://cdn.nlark.com/yuque/__latex/06726241030eac7975bcd9f72ce05a0a.svg)会减慢跟踪速度。<u>滤波在 SLAM 中拥有悠久的历史，其优势在于能够利用来自所有帧的信息，而无需来显式地优化所有的相机位姿，并在后端存储解码器（decoder）预测的所有点云图。</u>  
+
+> _小基线（small baseline）_：两张图片间的相机位姿偏差较小。
+>
+> 从代码中可知，存在多种点云图更新方法，但是按照论文作者说法，加权平均的效果最好，代码中默认也启用的是加权平均。
+>
+
+```python
+# MASt3R-SLAM/mast3r_slam/frame.py L74-L77
+        # 模式5: "weighted_pointmap" - 在笛卡尔坐标系中按置信度加权融合
+        elif filtering_mode == "weighted_pointmap":
+            # 加权平均公式：X_new = (C_old * X_old + C_new * X_new) / (C_old + C_new)
+            # 这样置信度高的观测会有更大的权重
+            self.X_canon = ((self.C * self.X_canon) + (C * X)) / (self.C + C)
+            # 累积置信度（用于后续加权计算）
+            self.C = self.C + C
+            # 增加更新计数
+            self.N += 1
+```
+
+---
+
+### Graph Construction and Loop Closure
+在跟踪过程中，<u>如果有效匹配的数量或</u>![image](https://cdn.nlark.com/yuque/__latex/21cb014a5397e1eab4b24f3251e6ffad.svg)_<u>中独有的关键帧像素数量</u>_<u>低于阈值</u>![image](https://cdn.nlark.com/yuque/__latex/243867cb3ebf82b93de2cc577095f2a0.svg)<u>，则添加一个新的关键帧</u>![image](https://cdn.nlark.com/yuque/__latex/039d08dd1755571980718bb537d92f9a.svg)。在添加![image](https://cdn.nlark.com/yuque/__latex/039d08dd1755571980718bb537d92f9a.svg)之后，一条 双向边（bidirectional edge）会被添加到边列表![image](https://cdn.nlark.com/yuque/__latex/201c332d65d99168e5a95c980d8c5e83.svg)中，连接到上一个关键帧![image](https://cdn.nlark.com/yuque/__latex/1c7ad26313d77780167c0b8ca4ee6cf5.svg)。这在时间上顺序地约束了估计的位姿；然而，漂移（drift）仍然可能发生。
+
+> ![image](https://cdn.nlark.com/yuque/__latex/21cb014a5397e1eab4b24f3251e6ffad.svg)_中独有的关键帧像素数量_：当前帧的有效匹配中，有多少像素比例对应到关键帧的不同（唯一）像素位置。
+>
+
+```python
+# MASt3R-SLAM/mast3r_slam/tracker.py L103-L110
+        # 关键帧选择：判断是否需要添加新的关键帧
+        # valid_kf 形状为 [H, W]，布尔值，表示该像素位置是否满足关键帧选择条件
+        n_valid = valid_kf.sum()  # 有效匹配的数量
+        match_frac_k = n_valid / valid_kf.numel()  # 有效匹配比例（匹配数量指标）
+
+        # 计算唯一关键帧像素的比例（唯一像素数量指标）
+        # idx_f2k[valid_match_k[:, 0]] 获取所有有效匹配对应的关键帧像素索引
+        ## idx_f2k 的形状是 [H, W, 2]，idx_f2k[i, j] = [u, v] 表示：
+        ### 当前帧的像素位置 (i, j) 匹配到关键帧的像素位置 (u, v)
+        # torch.unique() 计算唯一索引的数量
+        unique_frac_f = (
+            torch.unique(idx_f2k[valid_match_k[:, 0]]).shape[0] / valid_kf.numel()
+        )
+
+        # 如果匹配比例或唯一像素比例低于阈值，需要添加新关键帧
+        # 使用min()确保两个指标都要满足（论文中的ωk阈值）
+        new_kf = min(match_frac_k, unique_frac_f) < self.cfg["match_frac_thresh"]
+```
+
+为了闭合（解决）小型和大型的回环（loops），我们采用了 MASt3R-SfM [10] 使用的 _聚合选择性匹配核（Aggregated Selective Match Kernel, ASMK）_[46, 47] 框架，该框架用于从编码特征中检索图像。虽然这个方法以前是在所有图像都可用的批处理设置（batch setting）中使用，但我们对其进行了修改，使其能够增量地工作。
+
+我们使用![image](https://cdn.nlark.com/yuque/__latex/039d08dd1755571980718bb537d92f9a.svg)的编码特征查询数据库，以获得得分最高的![image](https://cdn.nlark.com/yuque/__latex/38a3f4d664b7a723d138f9d57be0c783.svg)张图像。由于码本（codebook）只有数万个中心点（centroids），我们发现进行密集的 <u>L2 距离</u>计算足以对特征进行量化。如果<u>检索分数高于阈值</u>![image](https://cdn.nlark.com/yuque/__latex/943d96ebb9125260533a4fc5fcd31b9f.svg)<u>，我们将这些图像对传递给 MASt3R 解码器</u>，并且如果<u>匹配的数量（如 3.2 节所述）高于阈值</u>![image](https://cdn.nlark.com/yuque/__latex/406f8f46e0376349569d311afafececb.svg)<u>，我们就添加双向边</u>。最后，我们<u>将新关键帧的编码特征添加到 </u>_<u>倒排文件索引（inverted file index）</u>_<u>中，从而更新检索数据库</u>。
+
+> _倒排文件索引（inverted file index）_：一种数据结构，用于快速检索包含特定视觉词（visual words）的图像。
+>
+
+```python
+# MASt3R-SLAM/mast3r_slam/retrieval_database.py L96-L105
+    def quantize_custom(self, qvecs, params):
+        """
+        将查询向量量化到码本质心。
+        使用高效的L2距离计算技巧，避免显式计算差值矩阵。
+        
+        输入:
+            qvecs (torch.Tensor): 查询向量（2D张量，每行是一个特征向量）
+            params (dict): 量化参数，包含"quantize"键，其下有"multiple_assignment"参数
+        
+        作用:
+            计算查询向量与所有码本质心的L2距离，并找到每个查询向量的top-k个最近质心。
+            使用数学技巧：||a-b||^2 = ||a||^2 + ||b||^2 - 2*a*b^T 来高效计算距离。
+        
+        输出:
+            topk.indices (torch.Tensor): 每个查询向量对应的top-k个最近质心的索引
+        """
+        # 使用数学技巧高效计算L2距离矩阵，避免显式形成差值矩阵
+        # ||qvec - centroid||^2 = ||qvec||^2 + ||centroid||^2 - 2*qvec*centroid^T
+        l2_dists = (
+            torch.sum(qvecs**2, dim=1)[:, None]  # 每个查询向量的平方和，形状为[n, 1]
+            + torch.sum(self.centroids**2, dim=1)[None, :]  # 每个质心的平方和，形状为[1, m]
+            - 2 * (qvecs @ self.centroids.mT)  # 2倍的点积，形状为[n, m]
+        )
+        # 获取多重分配参数k（每个向量分配给k个最近的质心）
+        k = params["quantize"]["multiple_assignment"]
+        # 找到每个查询向量的top-k个最近质心（largest=False表示找最小值）
+        topk = torch.topk(l2_dists, k, dim=1, largest=False)
+        # 返回质心索引（不返回距离值）
+        return topk.indices
+```
+
+```python
+# MASt3R-SLAM/mast3r_slam/retrieval_database.py L65-L72
+            # 过滤：只保留分数大于阈值的图像
+            valid = topk_images.values > min_thresh
+            # 获取满足条件的图像索引
+            topk_image_inds = topk_images.indices[valid]
+            # 转换为Python列表
+            topk_image_inds = topk_image_inds.tolist()
+
+        # 如果需要在查询后添加到数据库
+        if add_after_query:
+            # 将当前帧的特征添加到数据库
+            self.add_to_database(feat_np, id_np, topk_codes)
+
+        # 返回满足条件的top-k个相似关键帧索引
+        return topk_image_inds
+```
+
+```python
+# MASt3R-SLAM/mast3r_slam/global_opt.py L73-L80
+        # 计算每个关键帧对的匹配比例：有效匹配数 / 总像素数
+        # match_frac_j: 从i到j方向的匹配比例 [batch]
+        match_frac_j = valid_j.sum(dim=(1, 2)) / nj
+        # match_frac_i: 从j到i方向的匹配比例 [batch]
+        match_frac_i = valid_i.sum(dim=(1, 2)) / ni
+
+        # ========== 步骤7: 转换为张量并检查边有效性 ==========
+        # 将关键帧索引列表转换为PyTorch张量，便于后续的向量化操作
+        ii_tensor = torch.as_tensor(ii, device=self.device)  # 源关键帧索引 [num_edges]
+        jj_tensor = torch.as_tensor(jj, device=self.device)  # 目标关键帧索引 [num_edges]
+
+        # 检查边的有效性：需要两个方向的匹配比例都满足阈值
+        # NOTE: 要求两个方向的匹配比例都大于阈值，才接受这条边
+        # 使用min()确保两个方向都要满足条件，这样能保证双向匹配的质量
+        invalid_edges = torch.minimum(match_frac_j, match_frac_i) < min_match_frac  # 无效边掩码 [num_edges]
+```
+
+---
+
+### Backend Optimisation
+给定关键帧位姿![image](https://cdn.nlark.com/yuque/__latex/5c27c9d0da95777f868c62217668f0c8.svg)和规范点云图![image](https://cdn.nlark.com/yuque/__latex/4f300f007f7830edbb858495a34ba360.svg)的当前估计值，后端优化的目标是实现所有位姿和几何的全局一致性（global consistency）。
+
+虽然以前的公式在每次迭代后都使用一阶优化并需要重新缩放 [10, 50]，但我们引入了一种高效的二阶优化方案。该方案通过固定第一个 7-自由度 Sim(3) 位姿来处理 量尺自由度（gauge freedom）问题。
+
+我们联合最小化图中所有边![image](https://cdn.nlark.com/yuque/__latex/201c332d65d99168e5a95c980d8c5e83.svg)的射线误差：
+
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762153752387-3f077bb4-d7de-4cd6-a598-81544d869f72.png)
+
+其中![image](https://cdn.nlark.com/yuque/__latex/8ff813e5a45c00ebe23c87c03c4d83c3.svg)。给定![image](https://cdn.nlark.com/yuque/__latex/459f3c80a50b7be28751b0869ef5386a.svg)个关键帧，公式 (9) 形成并将![image](https://cdn.nlark.com/yuque/__latex/93d17bd5f63802832e74472fe63c78e9.svg)的块累积到![image](https://cdn.nlark.com/yuque/__latex/caff1c70c0becdce46503705eeb78fcf.svg)的 Hessian 矩阵中。我们再次使用类似于公式 (7) 的高斯-牛顿法来解决这个问题，但由于系统不密集，我们采用稀疏 Cholesky 分解。
+
+Hessian 矩阵的构建是通过使用解析雅可比矩阵和并行归约来实现的，所有这些都在 CUDA 中实现。此外，我们再次添加了一个小的距离一致性误差项，以避免在纯旋转中出现退化。
+
+对于每个新的关键帧，我们最多执行 10 次高斯-牛顿迭代，优化在收敛时终止。二阶信息极大地加快了全局优化速度，而我们高效的实现确保它不是整个系统的性能瓶颈。
+
+```python
+# MASt3R-SLAM/mast3r_slam/global_opt.py L129-L166
+def solve_GN_rays(self):
+        """
+        功能: 使用无标定的射线几何误差，对因子图中的Sim(3)关键帧位姿进行二阶（Gauss-Newton）优化，
+             固定前 pin 帧（通常为1帧）以消除尺度与整体自由度（gauge），并在收敛或达到迭代上限时结束。
+
+        输入:
+            无（使用类成员: self.frames, self.cfg, self.model 等；内部从因子图状态收集边与点/置信度等）
+
+        主要步骤:
+            1) 收集当前因子图的唯一关键帧索引并检查是否达到可优化规模（> pin）。
+            2) 根据唯一关键帧索引提取其 canonical 点云 Xs、当前位姿 T_WCs 以及平均置信度 Cs。
+            3) 将已有的单向边扩展为双向边，得到 ii, jj, 匹配索引与有效掩码以及匹配质量 Q。
+            4) 从配置读取 GN 的各类权重/阈值与迭代/收敛参数。
+            5) 调用后端 CUDA GN（gauss_newton_rays）构建稀疏Hessian并用稀疏Cholesky迭代求解。
+            6) 将优化后的位姿（除固定的 pin 帧外）写回帧管理器。
+
+        输出:
+            无显式返回值。副作用是更新 self.frames 中对应关键帧的 T_WC。
+        """
+        pin = self.cfg["pin"]  # 固定的关键帧数量（用于消除gauge自由度）
+        unique_kf_idx = self.get_unique_kf_idx()  # 当前图中涉及到的唯一关键帧索引（升序）
+        n_unique_kf = unique_kf_idx.numel()  # 唯一关键帧数量
+        if n_unique_kf <= pin:  # 若可优化的自由度不足（都被固定），则直接返回
+            return
+
+        Xs, T_WCs, Cs = self.get_poses_points(unique_kf_idx)  # 提取 canonical 点、当前位姿与平均置信度
+
+        ii, jj, idx_ii2jj, valid_match, Q_ii2jj = self.prep_two_way_edges()  # 将单向边拓展为双向边并整理观测
+
+        C_thresh = self.cfg["C_conf"]  # 置信度阈值
+        Q_thresh = self.cfg["Q_conf"]  # 匹配质量阈值
+        max_iter = self.cfg["max_iters"]  # GN 最大迭代次数
+        sigma_ray = self.cfg["sigma_ray"]  # 射线方向项噪声
+        sigma_dist = self.cfg["sigma_dist"]  # 射线距离项噪声
+        delta_thresh = self.cfg["delta_norm"]  # 增量范数收敛阈值
+
+        pose_data = T_WCs.data[:, 0, :]  # 提取 Sim(3) 参数向量（[N, 8]，t(3)+q(4)+s(1)）作为优化初值
+        mast3r_slam_backends.gauss_newton_rays(
+            pose_data,       # 位姿参数（按 unique_kf_idx 对齐）
+            Xs,              # 每个关键帧对应的 canonical 点云
+            Cs,              # 每个关键帧对应的平均置信度（用于加权/筛选）
+            ii,              # 边起点关键帧索引（图中的原索引）
+            jj,              # 边终点关键帧索引（图中的原索引）
+            idx_ii2jj,       # 像素/点匹配的索引映射（i->j）
+            valid_match,     # 有效匹配掩码
+            Q_ii2jj,         # 匹配质量分数（用于鲁棒加权）
+            sigma_ray,       # 射线方向噪声
+            sigma_dist,      # 射线距离噪声
+            C_thresh,        # 置信度阈值
+            Q_thresh,        # 质量阈值
+            max_iter,        # 最大迭代次数
+            delta_thresh,    # 收敛阈值
+        )
+
+        # Update the keyframe T_WC
+        self.frames.update_T_WCs(T_WCs[pin:], unique_kf_idx[pin:])  # 将固定帧之外的更新位姿写回
+```
+
+> 从代码中来看，上述的 solve_GN_rays 函数仅在后端优化和重定位时出现，这与原论文说在前端使用了该优化方法不符。
+>
+
+---
+
+### Relocalisation
+如果系统由于匹配数量不足而丢失跟踪，则会触发重定位（relocalisation）。对于一个新的帧，我们<u>使用更严格的分数阈值来查询检索数据库</u>。一旦<u>检索到的图像与当前帧有足够的匹配数量，该帧就会作为新的关键帧添加到图中</u>，并恢复跟踪。
+
+```python
+# MASt3R-SLAM/main.py L28-L71
+def relocalization(frame, keyframes, factor_graph, retrieval_database):
+    """
+    功能: 尝试以当前帧为新关键帧，对数据库中召回的候选关键帧进行重定位匹配，
+         若成功则将当前帧加入因子图并触发一次后端优化，以闭环/纠正漂移。
+
+    输入:
+        frame: Frame，当前帧（已包含图像、点云、位姿等）
+        keyframes: SharedKeyframes，关键帧共享存储与并发控制
+        factor_graph: FactorGraph，因子图对象，用于添加边并求解后端GN
+        retrieval_database: 检索数据库（基于图像/特征），用于候选闭环召回
+
+    输出:
+        bool: 是否重定位成功（成功则会进行一次后端优化）
+    """
+    # we are adding and then removing from the keyframe, so we need to be careful.
+    # The lock slows viz down but safer this way...
+    with keyframes.lock:  # 使用关键帧锁，确保并发安全
+        kf_idx = []  # 候选关键帧索引集合
+        retrieval_inds = retrieval_database.update(  # 基于数据库检索召回候选关键帧
+            frame,
+            add_after_query=False,
+            k=config["retrieval"]["k"],
+            min_thresh=config["retrieval"]["min_thresh"], # <-使用更严格的分数阈值来查询检索数据库
+        )
+        kf_idx += retrieval_inds  # 合并候选
+        successful_loop_closure = False  # 是否成功闭环
+        if kf_idx:  # 存在候选才尝试
+            keyframes.append(frame)  # 临时将当前帧作为关键帧加入（若失败会回滚）
+            n_kf = len(keyframes)  # 关键帧数量
+            kf_idx = list(kf_idx)  # convert to list
+            frame_idx = [n_kf - 1] * len(kf_idx)  # 与每个候选构建一条边
+            print("RELOCALIZING against kf ", n_kf - 1, " and ", kf_idx)
+            if factor_graph.add_factors(  # 尝试把边加入因子图（带质量/匹配比例过滤）
+                frame_idx,
+                kf_idx,
+                config["reloc"]["min_match_frac"], # <-检索到的图像与当前帧有足够的匹配数量，该帧就会作为新的关键帧添加到图中
+                is_reloc=config["reloc"]["strict"],
+            ):
+                retrieval_database.update(  # 只有重定位成功后才把该帧加入检索库
+                    frame,
+                    add_after_query=True,
+                    k=config["retrieval"]["k"],
+                    min_thresh=config["retrieval"]["min_thresh"],
+                )
+                print("Success! Relocalized")
+                successful_loop_closure = True
+                keyframes.T_WC[n_kf - 1] = keyframes.T_WC[kf_idx[0]].clone()  # 将当前关键帧位姿初始化为候选位姿
+            else:
+                keyframes.pop_last()  # 回滚加入失败的关键帧
+                print("Failed to relocalize")
+
+        if successful_loop_closure:  # 闭环成功则触发一次后端优化
+            if config["use_calib"]:
+                factor_graph.solve_GN_calib()  # 有标定：像素+log深度GN
+            else:
+                factor_graph.solve_GN_rays()   # 无标定：射线几何GN
+        return successful_loop_closure  # 返回是否成功
+```
+
+---
+
+### Known Calibration
+我们的系统可以在没有已知相机标定的情况下工作，但如果我们确实拥有标定参数，可以利用它进行两个直接的改变来提高精度。首先，在跟踪和建图（mapping）中用于优化的规范点云图，我们查询深度维度，并根据已知相机模型定义的射线来约束点云图，将其反投影（backprojected）。其次，我们改变优化中的残差，使其处于像素空间而不是射线空间。在后端，![image](https://cdn.nlark.com/yuque/__latex/4cc47a8bde7499b3333b451c922a5640.svg)中的一个像素![image](https://cdn.nlark.com/yuque/__latex/acdcf753ea739358818a2dce4593d70a.svg)是与它所匹配的 3D 点的投影进行比较的：
+
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762153939056-553c6a56-2ef0-46b7-94ba-c8c9ff31ad3a.png)
+
+ 其中![image](https://cdn.nlark.com/yuque/__latex/aa63813311a522aaa10a41976f257d1e.svg)是使用给定相机模型到像素空间的投影函数。此外，额外的距离残差（在之前的射线误差优化中用到）也被转换为深度以保持一致性。
 
 ```python
 # MASt3R-SLAM/mast3r_slam/backend/src/gn_kernels.cu L1231-L1543
@@ -1457,101 +1875,100 @@ __global__ void calib_proj_kernel(
     }
   }
 }
-
 ```
 
 ```python
 # MASt3R-SLAM/mast3r_slam/backend/src/gn_kernels.cu L1546-L1638
 /**
- * @brief 基于标定投影的Gauss-Newton优化（CUDA实现）
- * @param Twc 相机位姿
- * @param Xs 3D点坐标
- * @param Cs 置信度
- * @param K 相机内参矩阵
- * @param ii 边的起始节点索引
- * @param jj 边的终止节点索引
- * @param idx_ii2jj 匹配索引
- * @param valid_match 匹配有效性
- * @param Q 匹配质量
- * @param height 图像高度
- * @param width 图像宽度
- * @param pixel_border 像素边界
- * @param z_eps 深度阈值
- * @param sigma_pixel 像素标准差
- * @param sigma_depth 深度标准差
- * @param C_thresh 置信度阈值
- * @param Q_thresh 质量阈值
- * @param max_iter 最大迭代次数
- * @param delta_thresh 收敛阈值
- * @return 最后一次迭代的增量
- * 
- * 使用已知相机内参优化位姿，适用于已标定相机的SLAM系统
- */
+* @brief 基于标定投影的Gauss-Newton优化（CUDA实现）
+* @param Twc 相机位姿
+* @param Xs 3D点坐标
+* @param Cs 置信度
+* @param K 相机内参矩阵
+* @param ii 边的起始节点索引
+* @param jj 边的终止节点索引
+* @param idx_ii2jj 匹配索引
+* @param valid_match 匹配有效性
+* @param Q 匹配质量
+* @param height 图像高度
+* @param width 图像宽度
+* @param pixel_border 像素边界
+* @param z_eps 深度阈值
+* @param sigma_pixel 像素标准差
+* @param sigma_depth 深度标准差
+* @param C_thresh 置信度阈值
+* @param Q_thresh 质量阈值
+* @param max_iter 最大迭代次数
+* @param delta_thresh 收敛阈值
+* @return 最后一次迭代的增量
+* 
+* 使用已知相机内参优化位姿，适用于已标定相机的SLAM系统
+*/
 std::vector<torch::Tensor> gauss_newton_calib_cuda(
-  torch::Tensor Twc, torch::Tensor Xs, torch::Tensor Cs,
-  torch::Tensor K,
-  torch::Tensor ii, torch::Tensor jj, 
-  torch::Tensor idx_ii2jj, torch::Tensor valid_match,
-  torch::Tensor Q,
-  const int height, const int width,
-  const int pixel_border,
-  const float z_eps,
-  const float sigma_pixel, const float sigma_depth,
-  const float C_thresh,
-  const float Q_thresh,
-  const int max_iter,
-  const float delta_thresh)
+    torch::Tensor Twc, torch::Tensor Xs, torch::Tensor Cs,
+torch::Tensor K,
+torch::Tensor ii, torch::Tensor jj, 
+torch::Tensor idx_ii2jj, torch::Tensor valid_match,
+torch::Tensor Q,
+const int height, const int width,
+const int pixel_border,
+const float z_eps,
+const float sigma_pixel, const float sigma_depth,
+const float C_thresh,
+const float Q_thresh,
+const int max_iter,
+const float delta_thresh)
 {
-  auto opts = Twc.options();  // 获取tensor选项
-  const int num_edges = ii.size(0);  // 边数量
-  const int num_poses = Xs.size(0);  // 位姿数量
-  const int n = Xs.size(1);  // 点数量
+    auto opts = Twc.options();  // 获取tensor选项
+const int num_edges = ii.size(0);  // 边数量
+const int num_poses = Xs.size(0);  // 位姿数量
+const int n = Xs.size(1);  // 点数量
 
-  const int num_fix = 1;  // 固定位姿数量（通常固定第一帧作为参考）
+const int num_fix = 1;  // 固定位姿数量（通常固定第一帧作为参考）
 
-  // 设置索引映射
-  // 获取边中涉及的所有唯一关键帧
-  torch::Tensor unique_kf_idx = get_unique_kf_idx(ii, jj);
-  
-  // 为边构建创建索引（pin=0，包含所有位姿）
-  std::vector<torch::Tensor> inds = create_inds(unique_kf_idx, 0, ii, jj);
-  torch::Tensor ii_edge = inds[0];  // 重新索引后的起始节点
-  torch::Tensor jj_edge = inds[1];  // 重新索引后的终止节点
-  
-  // 为线性系统索引创建索引（pin=num_fix，固定前num_fix个位姿）
-  // 这样可以将全局索引映射到优化变量的局部索引
-  std::vector<torch::Tensor> inds_opt = create_inds(unique_kf_idx, num_fix, ii, jj);
-  torch::Tensor ii_opt = inds_opt[0];  // 优化用的起始节点索引
-  torch::Tensor jj_opt = inds_opt[1];  // 优化用的终止节点索引
+// 设置索引映射
+// 获取边中涉及的所有唯一关键帧
+torch::Tensor unique_kf_idx = get_unique_kf_idx(ii, jj);
 
-  const int pose_dim = 7;  // Sim(3)位姿的维度（3平移+4旋转）
+// 为边构建创建索引（pin=0，包含所有位姿）
+std::vector<torch::Tensor> inds = create_inds(unique_kf_idx, 0, ii, jj);
+torch::Tensor ii_edge = inds[0];  // 重新索引后的起始节点
+torch::Tensor jj_edge = inds[1];  // 重新索引后的终止节点
 
-  // 初始化缓冲区
-  // Hs存储4个7x7块矩阵：[Hii, Hij, Hji, Hjj]，每条边一组
-  torch::Tensor Hs = torch::zeros({4, num_edges, pose_dim, pose_dim}, opts);
-  // gs存储2个梯度向量：[gi, gj]，每条边一组
-  torch::Tensor gs = torch::zeros({2, num_edges, pose_dim}, opts);
+// 为线性系统索引创建索引（pin=num_fix，固定前num_fix个位姿）
+// 这样可以将全局索引映射到优化变量的局部索引
+std::vector<torch::Tensor> inds_opt = create_inds(unique_kf_idx, num_fix, ii, jj);
+torch::Tensor ii_opt = inds_opt[0];  // 优化用的起始节点索引
+torch::Tensor jj_opt = inds_opt[1];  // 优化用的终止节点索引
 
-  // 用于调试的输出变量
-  torch::Tensor dx;  // 位姿增量
+const int pose_dim = 7;  // Sim(3)位姿的维度（3平移+4旋转）
 
-  torch::Tensor delta_norm;  // 增量范数，用于判断收敛
+// 初始化缓冲区
+// Hs存储4个7x7块矩阵：[Hii, Hij, Hji, Hjj]，每条边一组
+torch::Tensor Hs = torch::zeros({4, num_edges, pose_dim, pose_dim}, opts);
+// gs存储2个梯度向量：[gi, gj]，每条边一组
+torch::Tensor gs = torch::zeros({2, num_edges, pose_dim}, opts);
 
-  // Gauss-Newton迭代主循环
-  for (int itr=0; itr<max_iter; itr++) {
+// 用于调试的输出变量
+torch::Tensor dx;  // 位姿增量
+
+torch::Tensor delta_norm;  // 增量范数，用于判断收敛
+
+// Gauss-Newton迭代主循环
+for (int itr=0; itr<max_iter; itr++) {
 
     // 步骤1：调用CUDA kernel计算Hessian矩阵和梯度向量
     // 每条边启动一个block，每个block有THREADS个线程
     calib_proj_kernel<<<num_edges, THREADS>>>(
-      Twc.packed_accessor32<float,2,torch::RestrictPtrTraits>(),  // 当前位姿估计
-      Xs.packed_accessor32<float,3,torch::RestrictPtrTraits>(),   // 3D点云
-      Cs.packed_accessor32<float,3,torch::RestrictPtrTraits>(),   // 置信度
-      K.packed_accessor32<float,2,torch::RestrictPtrTraits>(),    // 相机内参
-      ii_edge.packed_accessor32<long,1,torch::RestrictPtrTraits>(),     // 边的起始节点
-      jj_edge.packed_accessor32<long,1,torch::RestrictPtrTraits>(),     // 边的终止节点
-      idx_ii2jj.packed_accessor32<long,2,torch::RestrictPtrTraits>(),   // 点匹配索引
-      valid_match.packed_accessor32<bool,3,torch::RestrictPtrTraits>(), // 匹配有效性
-      Q.packed_accessor32<float,3,torch::RestrictPtrTraits>(),          // 匹配质量
+        Twc.packed_accessor32<float,2,torch::RestrictPtrTraits>(),  // 当前位姿估计
+Xs.packed_accessor32<float,3,torch::RestrictPtrTraits>(),   // 3D点云
+Cs.packed_accessor32<float,3,torch::RestrictPtrTraits>(),   // 置信度
+K.packed_accessor32<float,2,torch::RestrictPtrTraits>(),    // 相机内参
+ii_edge.packed_accessor32<long,1,torch::RestrictPtrTraits>(),     // 边的起始节点
+jj_edge.packed_accessor32<long,1,torch::RestrictPtrTraits>(),     // 边的终止节点
+idx_ii2jj.packed_accessor32<long,2,torch::RestrictPtrTraits>(),   // 点匹配索引
+valid_match.packed_accessor32<bool,3,torch::RestrictPtrTraits>(), // 匹配有效性
+Q.packed_accessor32<float,3,torch::RestrictPtrTraits>(),          // 匹配质量
       Hs.packed_accessor32<float,4,torch::RestrictPtrTraits>(),         // 输出：Hessian
       gs.packed_accessor32<float,3,torch::RestrictPtrTraits>(),         // 输出：梯度
       height, width, pixel_border, z_eps, sigma_pixel, sigma_depth, C_thresh, Q_thresh
@@ -1597,4 +2014,82 @@ std::vector<torch::Tensor> gauss_newton_calib_cuda(
   return {dx};  // 返回最后一次迭代的增量（用于调试和分析）
 }
 ```
+
+## 重要参考文献
+> 仅选取重要部分
+>
+
+[35] **Why having 10,000 parameters in your camera model is better than twelve**：提出基于中心相机模型进行特征匹配的方法。  
+[Schops_Why_Having_10000_Parameters_in_Your_Camera_Model_Is_Better_CVPR_2020_paper.pdf](https://leedong25.yuque.com/attachments/yuque/0/2025/pdf/45861457/1761700246166-69446bd2-3056-4bd6-8fb9-8bd34d93437e.pdf)  
+[https://arxiv.org/abs/1912.02908](https://arxiv.org/abs/1912.02908)
+
+# 项目部署与测试
+## 项目部署
+### 创建环境 && 安装依赖
+```python
+conda create -n mast3r-slam python=3.11
+conda activate mast3r-slam
+```
+
+```python
+nvcc --version
+```
+
+```python
+# CUDA 11.8
+conda install pytorch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1  pytorch-cuda=11.8 -c pytorch -c nvidia
+# CUDA 12.1
+conda install pytorch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 pytorch-cuda=12.1 -c pytorch -c nvidia
+# CUDA 12.4
+conda install pytorch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 pytorch-cuda=12.4 -c pytorch -c nvidia
+```
+
+```python
+git clone https://github.com/rmurai0610/MASt3R-SLAM.git --recursive
+cd MASt3R-SLAM/
+
+# 服务器docker环境无法翻墙，可考虑先在本地下载后将文件传输过去
+
+pip install -e thirdparty/mast3r
+pip install -e thirdparty/in3d
+pip install --no-build-isolation -e .
+ 
+
+# Optionally install torchcodec for faster mp4 loading
+pip install torchcodec==0.1
+```
+
+这一步 pip install --no-build-isolation -e . 中有 "lietorch @ git+[https://github.com/princeton-vl/lietorch.git"](https://github.com/princeton-vl/lietorch.git")，由于 Docker 环境无法翻墙，需要源码安装 lietorch：  
+**Step1 下载源码**：[https://github.com/princeton-vl/lietorch](https://github.com/princeton-vl/lietorch)，存放位置不指定，只需要 conda 环境正确即可
+
+**Step2 安装 lietorch 所需依赖**：
+
+```python
+# install requirements（前面安装过可以跳过）
+pip install torch torchvision torchaudio wheel
+
+# optional: specify GPU architectures
+export TORCH_CUDA_ARCH_LIST="7.5;8.6;8.9;9.0"
+
+# install lietorch
+pip install --no-build-isolation .
+```
+
+**Step3 重新运行指令**：运行之前需要将 "lietorch @ git+[https://github.com/princeton-vl/lietorch.git"](https://github.com/princeton-vl/lietorch.git") 这一行注释掉。
+
+```python
+pip install --no-build-isolation -e . 
+```
+
+```python
+mkdir -p checkpoints/
+wget https://download.europe.naverlabs.com/ComputerVision/MASt3R/MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric.pth -P checkpoints/
+wget https://download.europe.naverlabs.com/ComputerVision/MASt3R/MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric_retrieval_trainingfree.pth -P checkpoints/
+wget https://download.europe.naverlabs.com/ComputerVision/MASt3R/MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric_retrieval_codebook.pkl -P checkpoints/
+```
+
+## 数据集下载
+scripts 里面的 bash 脚本链接过时，需到官网手动下载，以 TUM RGBD 为例：
+
+在官网 [https://cvg.cit.tum.de/data/datasets/rgbd-dataset/download](https://cvg.cit.tum.de/data/datasets/rgbd-dataset/download) 下载 scripts/download_tum.sh 中所需数据集并解压，注意保持路径为 datasets/tum
 
