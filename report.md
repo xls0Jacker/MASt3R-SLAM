@@ -10,7 +10,7 @@
 ## 研究背景与动机
 视觉同步定位与地图构建（SLAM）是当今机器人学和增强现实产品的基础构建模块。通过精心设计集成的硬件与软件栈，现已能实现鲁棒且准确的视觉SLAM。然而，SLAM 非即插即用算法，因其需要硬件专业知识和校准。<u>对于无额外传感器（如惯性测量单元，IMU）的最小单相机配置，目前尚不存在能同时提供精确位姿与一致稠密地图的野外同步定位与地图构建方案</u>。<font style="color:#DF2A3F;">（研究背景）</font>实现这种可靠的稠密 SLAM 系统将为空间智能开辟新的研究途径。<font style="color:#DF2A3F;">（研究动机）</font>
 
-## 相关工作
+## Related Work
 ### 稀疏单目 SLAM
 为了获得精确的位姿估计，稀疏单目 SLAM 专注于联合求解相机位姿和选定数量的无偏三维路标点。利用优化的稀疏性和精心的图构建的算法进步, 实现了大规模场景的实时位姿估计和稀疏重建。<u>尽管</u>**<u>稀疏单目 SLAM</u>**<u> 在给定足够特征和视差的情况下非常精确，但它</u>**<u>缺乏一个稠密场景模型</u>**<u>，而该模型对于鲁棒跟踪和更显式的几何推理都很有用</u>。
 
@@ -59,7 +59,7 @@
 >
 
 ## Method
-<u>DUSt3R</u> 接收一对图像** **![image](https://cdn.nlark.com/yuque/__latex/864e19c17f3d060821e5424d78969f3e.svg)，并输出三维点图![image](https://cdn.nlark.com/yuque/__latex/5c1953adbfcde030f8e6d4f154f003dd.svg)，以及对应的置信度图![image](https://cdn.nlark.com/yuque/__latex/67266430b5067e273bb921bf058efa5d.svg)。在 <u>MASt3R</u> 中，额外增加了一个头部（head）来输出用于匹配的 d 维特征：![image](https://cdn.nlark.com/yuque/__latex/8dc807a287e14c1eab5c4a759e7794a4.svg)，以及对应的置信度![image](https://cdn.nlark.com/yuque/__latex/feb7fa7ec9cab17e75a1cbcd61d2b659.svg)。我们将![image](https://cdn.nlark.com/yuque/__latex/16b89b1ef44fa579382389d2d0fe8394.svg)定义为 MASt3R 的前向传播函数，它输出上述所有内容。
+<u>DUSt3R</u> 接收一对图像** **![image](https://cdn.nlark.com/yuque/__latex/864e19c17f3d060821e5424d78969f3e.svg)，并输出三维点图![image](https://cdn.nlark.com/yuque/__latex/5c1953adbfcde030f8e6d4f154f003dd.svg)，以及对应的置信度图![image](https://cdn.nlark.com/yuque/__latex/04c696869f5b322c2becc052a0be4f3b.svg)。在 <u>MASt3R</u> 中，额外增加了一个头部（head）来输出用于匹配的 d 维特征：![image](https://cdn.nlark.com/yuque/__latex/1e83581c8d9972723511cd5b39a1924e.svg)，以及对应的置信度![image](https://cdn.nlark.com/yuque/__latex/0bb3455430a0ce973f4c5343e93633c1.svg)。我们将![image](https://cdn.nlark.com/yuque/__latex/16b89b1ef44fa579382389d2d0fe8394.svg)定义为 MASt3R 的前向传播函数，它输出上述所有内容。
 
 > 这里的符号![image](https://cdn.nlark.com/yuque/__latex/7fc0e9ba98bd8abb3ee3e13a189a72ba.svg)表示在相机![image](https://cdn.nlark.com/yuque/__latex/036441a335dd85c838f76d63a3db2363.svg)坐标系中表示的图像![image](https://cdn.nlark.com/yuque/__latex/00eb1ac84cb04ae9942cd8d9cf8ca49f.svg)的三维点图。
 >
