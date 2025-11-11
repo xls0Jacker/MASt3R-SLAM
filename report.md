@@ -202,8 +202,8 @@ _对应关系_是 SLAM 的一个基本组成部分，同时被跟踪和建图所
 
 > _对应关系_：这里的对应关系是指同一相机![image](https://cdn.nlark.com/yuque/__latex/2443fbcfeb7e85e1d62b6f5e4f27207e.svg)坐标下图像![image](https://cdn.nlark.com/yuque/__latex/190a077310286086074db80e583b7e1e.svg)之间像素坐标的对应关系。
 >
-> 针孔相机模型在知道相机内外参的情况下可以直接根据投影公式找到三维点和像素坐标的对应关系。  
-但是 MASt3R 只能获取三维点，无法直接通过投影公式计算像素坐标，后续将说明如何通过迭代得到对应关系。
+> MASt3R 只能获取两组三维点，通过投影公式可以得到其对应的两组像素点，<u>但是并无法获得这两组像素点之间的对应关系</u>。  
+可能会有一个比较直接的想法，即这两组三维点均在相机![image](https://cdn.nlark.com/yuque/__latex/4dd004c812cd8d82d0efed94734dd4da.svg)坐标系下，那么这两组中共视的那部分三维点坐标<u>理应</u>相同，那么可以通过投影公式找到对应的像素坐标，从而得到匹配关系。但是 MASt3R 得到的共视的那部分三维点坐标并不完全相同，会存在一定的误差值，从而导致上述的方法失效。
 >
 
 朴素的暴力匹配具有二次复杂度，因为它是对所有可能的像素对进行全局搜索。为了避免这种情况，<u>DUSt3R</u> 在三维点上使用 k‐d 树；然而，构建过程不易并行化，并且如果点云图预测存在误差，3D 中的最近邻搜索会找到许多不准确的匹配。
@@ -1430,7 +1430,7 @@ def solve_GN_rays(self):
         self.frames.update_T_WCs(T_WCs[pin:], unique_kf_idx[pin:])  # 将固定帧之外的更新位姿写回
 ```
 
-> 从代码中来看，上述的 solve_GN_rays 函数仅在后端优化和重定位时出现，这与原论文说在前端使用了该优化方法不符。
+> 从代码中来看，上述的 solve_GN_rays 函数仅在后端优化和重定位时出现，这与原论文说在前端使用了该优化方法不符。？？
 >
 
 ---
@@ -2014,6 +2014,250 @@ Q.packed_accessor32<float,3,torch::RestrictPtrTraits>(),          // 匹配质�
   return {dx};  // 返回最后一次迭代的增量（用于调试和分析）
 }
 ```
+
+## Results
+我们在多种真实世界数据集上评估了系统性能。针对定位任务，我们在 TUM RGB‐D [38]，7‐Scenes [36]，ETH3D‐SLAM [34], 和 EuRoC [3] 上评估单目SLAM（均采用单目 RGB 设置）。几何评估方面，选用提供 3D 结构扫描真值的EuRoC Vicon 房间序列，以及具备深度相机测量的 7‐Scenes 数据集。
+
+我们在配备 Intel Core i9 12900K 3.50GHz 的台式机和单块英伟达 GeForce RTX 4090 上运行系统。由于系统以约 15 帧率运行，我们对数据集的<u>每 2 帧</u>进行子采样以模拟实时性能。注意，我们使用来自 MASt3R 的全分辨率输出，该输出将最大维度调整为 512 大小。
+
+### Camera Pose Estimation
+<u>对于所有数据集，我们报告以米为单位的绝对轨迹误差 (ATE) 的均方根误差 (RMSE)。由于所有系统均为单目，我们执行缩放轨迹对齐。我们将未使用已知标定的系统表示为 Ours*。</u>
+
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762823754261-3e786af6-89d1-4a03-b981-0c89001228e8.png)
+
+**表 1：TUM RGB-D 数据集上 ATE 评估（单位 m）**
+
+> **加粗**最优，<u>下划线</u>次优，标定 (Calibrated) 和未标定 (Uncalibrated) 的一起比较。
+>
+
+**TUM RGB‐D 数据集**：在 TUM 数据集上，我们展示了最先进的轨迹误差，当使用校准如_表 1_。许多先前表现最佳的算法，例如 DROID‐SLAM、DPV‐SLAM 和 GO‐SLAM，都基于 DROID‐SLAM 提出的基础匹配和端到端系统。相比之下，我们提出了一种独特的系统，该系统采用现成的双视图几何先验，并展示出它能够在实时运行时超越其他系统。
+
+此外，我们的未校准系统显著超越了 一个基线（我们将其记为 DROID‐SLAM*），该基线使用 GeoCalib 来校准内参 [48] 在序列的首张图像上，随后被 DROID‐SLAM 使用。我们实现这一点而无需假设一个固定的相机模型跨越整个序列，并且证明了相对于那些解决子问题的先验，3D 先验对于稠密未校准 SLAM 更有价值，相对于那些解决子问题的先验。我们的未校准 SLAM 结果也与来自近期学习技术的结果可比拟，例如具有已知标定的 DPV‐SLAM。
+
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762824062153-6d0a56dc-db69-464f-8587-ccbade7d57d9.png)
+
+**表 2：7-Scenes 数据集上 ATE 评估（单位 m）**
+
+**7-Scenes**：我们使用相同的序列进行评估，遵循 NICER‐SLAM，如_表 2_。我们校准后的系统（Our）超越了 NICER‐SLAM [58] 和 DROID‐SLAM。此外，我们实时的未校准系统（Ours*）使用单一的三维重建先验，超越了 NICER‐SLAM，其在深度、法线和光流网络中使用多个先验，并且离线运行。
+
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762824270309-1ab2bc7f-0514-42c8-a10c-22912137d512.png)
+
+**图 5：ETH3D-SLAM 数据集上 ATE 评估（单位 m）**
+
+> **横轴 (ATE [m])**：表示系统重建轨迹与真实轨迹的平均位置误差（单位为米）。越小越好。    
+**纵轴 (# Successful Datasets)**：表示在<u>误差小于某个 ATE 阈值</u>时，算法成功重建的数据集数量。越高越好。   
+曲线越“靠左靠上”，代表算法越优秀。   
+>
+
+**ETH3D-SLAM**：由于该数据集的难度，ETH3D‐SLAM 此前仅针对 RGB‐D 方法进行了评估。由于官方私有评估的<u> ATE 阈值</u>对于单目方法过于严格，我们在训练序列上评估了几种最先进的单目系统，并生成了 ATE 曲线。该数据集包含具有快速相机运动的序列，因此，对于所有方法，我们不对帧进行子采样。尽管其他方法可能具有更精确的轨迹，但我们的方法在鲁棒性方面具有更长的尾部，从而在绝对轨迹误差和曲线下面积 (AUC) 上都取得了最佳结果。
+
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762825055664-aa8ea3e8-e760-43be-a05c-80920a2a67f3.png)
+
+**表 3：7-Scenes 数据集和 EuRoC 数据集上****<u>重建效果</u>****评估（单位 m）**
+
+> **ATE**：表示相机轨迹的平均绝对误差，<u>数值越小</u>代表定位越准确。  
+**Accuracy**（重建精度）：测量重建点云与真实点云之间的平均距离，<u>越小越好</u>。  
+**Completion**（重建完整度）：衡量重建结果是否覆盖完整场景，<u>越小表示越完整</u>。  
+**Chamfer**（倒角距离）：综合考虑重建精度与完整度的距离度量，<u>越小表示整体重建效果越好</u>。
+>
+
+**EuRoC**：我们报告了所有 11 个 EuRoC 序列的平均绝对轨迹误差，见_表 3_。在未校准情况下 (Ours*)，我们发现畸变过于严重，因为 MASt3R 尚未针对此类相机模型进行训练，因此我们对图像进行了去畸变处理，但未对流程的其余部分进行校准。总体而言，我们的系统性能不如 DROID‐SLAM，但 DROID‐SLAM 在训练中显式增加了 10% 的灰度图像。然而，0.041m 的绝对轨迹误差仍然非常精确，并且从比较中可以看出，所有性能优越的方法都建立在 DROID‐SLAM 的基础之上，而我们提出了一种使用三维重建先验的新方法。
+
+> 这里只用看 _表 3_ 的 ATE 指标。
+>
+
+### Dense Geometry Evaluation
+我们在 EuRoC Vicon 房间序列和 7‐Scenes seq‐01 上评估了我们的几何方法与 DROID‐SLAM 及 Spann3R [49] 的性能对比。对于 EuRoC，通过将估计轨迹与 Vicon 轨迹对齐，获得参考点云与估计点云之间的配准。需注意，这种设置对 DROID‐SLAM 有利，因其能获得更低的轨迹误差。 对于 7‐Scenes，我们使用数据集提供的位姿对深度图像进行反投影以创建参考点云，随后通过迭代最近点 (ICP) 将其与估计点云对齐——由于未提供 RGB 与深度传感器之间的外参标定。
+
+我们报告精度的均方根误差 (RMSE)，其定义为每个估计点与其最近参考点之间的距离，以及完整性的均方根误差，即每个参考点与其最近估计点之间的距离。两项指标均在 0.5m 的最大距离阈值下计算，并在所有序列上取平均值。我们还报告了倒角距离（Chamfer Distance），即这两项指标的平均值。
+
+_表 3_ 总结了在 7‐Scenes 和 EuRoC 上的几何评估结果。在 7‐Scenes 数据集上，无论是否进行校准,我们的方法以及Spann3R 都比 DROID‐SLAM 实现了更精确的重建，这凸显了 3D 先验的优势。我们在两种不同设置下运行 Spann3R：一种是每 20 帧图像选取一个关键帧，另一种是每 2 帧图像选取一个关键帧。两种设置的差异表明免测试时优化的方法在泛化性方面面临挑战。无校准的我们的方法在精度 (Accuracy) 和倒角距离 (Chambe) 指标上均表现最佳，这归因于 7‐Scenes 提供的默认出厂标定内参。
+
+> 这里看_ 表 3 _的 Accuracy、Completion 和 Chamber 指标。
+>
+
+对于 EuRoC 数据集，由于序列不以物体为中心，Spann3R 表现不佳因此被排除。如_ 表3 _所示，尽管 DROID‐SLAM 在绝对轨迹误差指标 (ATE) 上优于我们的方法，但无论是否经过校准，我们的方法都获得了更好的几何重建质量。DROID‐SLAM 因估计了大量环绕参考点云的噪声点而获得更高完整性，但我们的方法具有显著更优的精度。值得注意的是，我们的未校准系统产生了明显更大的绝对轨迹误差 (ATE) ，但在倒角距离指标 (Chambe) 上仍优于 DROID‐SLAM。
+
+### Qualitative Results
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762826142237-ff3c2e35-dbe1-4d8a-9a97-68a4a940dac2.png)
+
+**图 1：《公民》序列重建（Uncalibrated）**
+
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762826297872-e107bfae-798e-4ede-bd9d-b5c63d8457c9.png)
+
+**图 4：TUM fr1/floor 序列重建**
+
+_图1_ 展示了镜面人物上可匹配特征较少的挑战性《公民》 序列的重建。我们在_图 4_ 和_图 6_ 中展示了 TUM 和 EuRoC 数据集的位姿估计和稠密重建示例。此外，我们在 _图 7_ 中展示了连续关键帧间极端变焦变化的示例。
+
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762826345081-67029c79-c950-42cb-9d64-9534784ef44e.png)
+
+**图 6：EuRoC Machine Hall 04 序列重建**
+
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762826380035-9c02070f-357f-4150-ae42-69a52791ba69.png)
+
+**图 7：EuRoC Machine Hall 04 序列重建（Uncalibrated）**
+
+### Component Analysis
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762826805579-7e0e4f1c-df9c-44ca-be3c-d218a44135ca.png)
+
+**表 4：匹配方法比较**
+
+> 这里 k-d tree 是 DUSt3R 的匹配方法。
+>
+
+我们在_表 4 _中比较匹配方法。我们的并行投影匹配配合特征优化实现了最佳精度，且运行时间显著缩短。在整个像素上进行 MASt3R 匹配耗时 2 秒，而我们的匹配仅需 2 毫秒，使整个系统帧率提升近 40 倍。
+
+![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762827030695-8d54dfff-609a-4a8b-a5d8-42f152e83d75.png)
+
+**表 5：点云融合方法比较**
+
+> 这几个方法在 MAST3R-SLAM/config/base.yaml 中 filtering_mode 参数可调，具体实现在 MAST3R-SLAM/mast3r_slam/frame.py 的 update_pointmap 函数中实现。
+>
+
+```python
+# MASt3R-SLAM/mast3r_slam/retrieval_database.py L41-L108
+    def update_pointmap(self, X: torch.Tensor, C: torch.Tensor):
+        """
+        更新关键帧的点云地图，根据配置的过滤模式融合新旧点云数据
+        
+        该函数用于将新的点云观测融合到关键帧的现有点云地图中。支持多种融合策略：
+        - first: 仅使用第一次更新
+        - recent: 总是使用最新的观测
+        - best_score: 使用置信度评分最高的观测
+        - indep_conf: 独立地按置信度选择每个点
+        - weighted_pointmap: 在笛卡尔坐标系中按置信度加权融合
+        - weighted_spherical: 在球坐标系中按置信度加权融合
+        
+        Args:
+            X (torch.Tensor): 新的3D点云坐标 [H, W, 3] 或 [N, 3]，表示要融合的点坐标
+            C (torch.Tensor): 新的置信度值 [H, W, 1] 或 [N, 1]，对应每个点的置信度
+            
+        Returns:
+            None: 直接修改 self.X_canon（更新后的点云）和 self.C（累积的置信度）
+        """
+        # 从配置中获取点云融合模式
+        filtering_mode = config["tracking"]["filtering_mode"]
+
+        # 如果点云地图为空（首次初始化），直接使用新数据
+        if self.N == 0:
+            # 克隆新的点云坐标（避免修改原始数据）
+            self.X_canon = X.clone()
+            # 克隆新的置信度值
+            self.C = C.clone()
+            # 设置更新次数为1
+            self.N = 1
+            # 设置总更新次数为1
+            self.N_updates = 1
+            # 如果使用best_score模式，需要初始化评分
+            if filtering_mode == "best_score":
+                self.score = self.get_score(C)
+            return
+
+        # 模式1: "first" - 仅保留第一次更新（第二次更新时）
+        if filtering_mode == "first":
+            # 只在第二次更新时（N_updates == 1表示第一次更新已完成，这是第二次）
+            if self.N_updates == 1:
+                # 使用新数据替换旧数据
+                self.X_canon = X.clone()
+                self.C = C.clone()
+                # 重置更新计数
+                self.N = 1
+        # 模式2: "recent" - 总是使用最新的观测数据
+        elif filtering_mode == "recent":
+            # 直接替换为新数据
+            self.X_canon = X.clone()
+            self.C = C.clone()
+            # 重置更新计数
+            self.N = 1
+        # 模式3: "best_score" - 使用置信度评分最高的观测
+        elif filtering_mode == "best_score":
+            # 计算新数据的置信度评分（中位数或均值）
+            new_score = self.get_score(C)
+            # 如果新数据的评分更高，则替换
+            if new_score > self.score:
+                self.X_canon = X.clone()
+                self.C = C.clone()
+                self.N = 1
+                # 更新保存的评分
+                self.score = new_score
+        # 模式4: "indep_conf" - 独立地按置信度选择每个点
+        elif filtering_mode == "indep_conf":
+            # 创建掩码：新置信度大于旧置信度的位置
+            new_mask = C > self.C
+            # 将掩码扩展到3个坐标维度（x, y, z）
+            # repeat(1, 3) 表示在最后一个维度重复3次
+            self.X_canon[new_mask.repeat(1, 3)] = X[new_mask.repeat(1, 3)]
+            # 更新置信度更高的位置
+            self.C[new_mask] = C[new_mask]
+            # 重置更新计数
+            self.N = 1
+        # 模式5: "weighted_pointmap" - 在笛卡尔坐标系中按置信度加权融合
+        elif filtering_mode == "weighted_pointmap":
+            # 加权平均公式：X_new = (C_old * X_old + C_new * X_new) / (C_old + C_new)
+            # 这样置信度高的观测会有更大的权重
+            self.X_canon = ((self.C * self.X_canon) + (C * X)) / (self.C + C)
+            # 累积置信度（用于后续加权计算）
+            self.C = self.C + C
+            # 增加更新计数
+            self.N += 1
+        # 模式6: "weighted_spherical" - 在球坐标系中按置信度加权融合
+        elif filtering_mode == "weighted_spherical":
+            # 辅助函数：将笛卡尔坐标转换为球坐标 (x, y, z) -> (r, phi, theta)
+            def cartesian_to_spherical(P):
+                # r: 径向距离（点到原点的距离）
+                r = torch.linalg.norm(P, dim=-1, keepdim=True)
+                # 将点云分割为x, y, z三个分量
+                x, y, z = torch.tensor_split(P, 3, dim=-1)
+                # phi: 方位角（在xy平面上的角度，范围[-π, π]）
+                phi = torch.atan2(y, x)
+                # theta: 极角（与z轴的角度，范围[0, π]）
+                theta = torch.acos(z / r)
+                # 组合为球坐标 (r, phi, theta)
+                spherical = torch.cat((r, phi, theta), dim=-1)
+                return spherical
+
+            # 辅助函数：将球坐标转换为笛卡尔坐标 (r, phi, theta) -> (x, y, z)
+            def spherical_to_cartesian(spherical):
+                # 分割球坐标为r, phi, theta
+                r, phi, theta = torch.tensor_split(spherical, 3, dim=-1)
+                # 根据球坐标公式计算笛卡尔坐标
+                x = r * torch.sin(theta) * torch.cos(phi)
+                y = r * torch.sin(theta) * torch.sin(phi)
+                z = r * torch.cos(theta)
+                # 组合为笛卡尔坐标
+                P = torch.cat((x, y, z), dim=-1)
+                return P
+
+            # 将旧的笛卡尔坐标转换为球坐标
+            spherical1 = cartesian_to_spherical(self.X_canon)
+            # 将新的笛卡尔坐标转换为球坐标
+            spherical2 = cartesian_to_spherical(X)
+            # 在球坐标系中进行加权平均（与笛卡尔坐标系类似）
+            # 这样可以在球坐标系中更好地融合方向和距离信息
+            spherical = ((self.C * spherical1) + (C * spherical2)) / (self.C + C)
+
+            # 将融合后的球坐标转换回笛卡尔坐标
+            self.X_canon = spherical_to_cartesian(spherical)
+            # 累积置信度
+            self.C = self.C + C
+            # 增加更新计数
+            self.N += 1
+
+        # 无论哪种模式，都增加总更新次数（用于统计）
+        self.N_updates += 1
+        return
+
+    def get_average_conf(self):
+        return self.C / self.N if self.C is not None else None
+```
+
+在_表 5_ 中，我们测试了更新规范点云图的不同方法，并报告了 TUM、7‐Scenes 和 EuRoC 数据集的平均绝对轨迹误差 (ATE)。选择最近 (Recent) 的和最早 (First) 的点云图分别会导致漂移和基线不足。在校准的情况下，加权融合 (Weighted) 与选择具有最高中位数置信度 (Median) 的点云图表现相当，但在未校准的情况下，加权融合 (Weighted) 实现了最低的绝对轨迹误差，并将 EuRoC 上的绝对轨迹误差提高了 1.3cm，这表明融合相机模型非常重要。
+
+在_表 6 _中，针对未校准的跟踪和后端优化，光线误差公式相比使用包含不准确深度预测的三维点误差，提升了性能。
+
+_表 7_ 显示，闭环检测提高了位姿和几何精度，且在更长的序列上收益更为显著。这表明 MASt3R 的输出仍存在偏差并导致漂移，而我们的组件正是为缓解这一问题而设计。
+
+
 
 ## 重要参考文献
 > 仅选取重要部分
