@@ -62,7 +62,7 @@
 > _[50]*_  DUSt3R (CVPR 2024)  ：直接预测“两张图像在同一坐标系下的点云表示”（pointmap）  ，并未给出这两幅图像之间的位姿信息，若有需要得从如![image](https://cdn.nlark.com/yuque/__latex/c18e8be0376d51a53ab88fdf4e6db10f.svg)的优化显式获取。
 >
 
-后续方法 <u><font style="background-color:#FCE75A;">MASt3R</font></u>_<u>[21] </u>_**<u>预测额外的逐像素特征</u>**<u>以改进定位和运动恢复结构的像素匹配[10]</u>。然而与所有先验方法类似，其预测在三维几何中仍可能存在不一致性和相关误差。因此 DUSt3R 和 MASt3R‐SfM 需通过大规模优化确保全局一致性，但时间复杂度无法随图像数量良好扩展。Spann3R_[49]_ 通过微调 DUSt3R 直接将点云图流预测到全局坐标系，从而放弃后端优化，但必须维持有限的 token 内存，这可能导致大场景中的漂移。
+后续方法 <u><font style="background-color:#FCE75A;">MASt3R</font></u>_<u>[21] </u>_**<u>预测额外的逐像素特征</u>**<u>以改进定位和运动恢复结构的像素匹配</u>_<u>[10]</u>_。然而与所有先验方法类似，其预测在三维几何中仍可能存在不一致性和相关误差。因此 DUSt3R 和 MASt3R‐SfM 需通过大规模优化确保全局一致性，但时间复杂度无法随图像数量良好扩展。Spann3R_[49]_ 通过微调 DUSt3R 直接将点云图流预测到全局坐标系，从而放弃后端优化，但必须维持有限的 token 内存，这可能导致大场景中的漂移。
 
 > _[21]_* MASt3R (ECCV 2024)  ：与 DUSt3R 相比，MASt3R 使用更大规模、更丰富的训练数据，并额外增加了一个匹配特征头，使模型能更可靠地恢复全局尺度和相对姿态。  
 >
@@ -99,7 +99,7 @@
 >
 > 根据 MASt3R-SLAM/thirdparty/mast3r/README.md 可知：
 >
-> + 置信度![image](https://cdn.nlark.com/yuque/__latex/3e2f26cc65e9b309efa11c948e05cf2e.svg)<font style="color:rgb(51, 51, 51);background-color:rgb(248, 248, 248);">的取值范围是 [1, +∞)</font>
+> + 置信度![image](https://cdn.nlark.com/yuque/__latex/3e2f26cc65e9b309efa11c948e05cf2e.svg)的取值范围是 [1, +∞)，越大置信度越高
 >
 
 以下代码是 <u>MASt3R</u> 的输出。其中 X 的维度 (4, B, H, W, 3)，可知，<u>同一图像中像素和三维点的对应关系是已知的</u>。
@@ -188,7 +188,7 @@ def mast3r_decode_symmetric_batch(
 >
 
 ##### 这里对参考文献 [35] 射线定义做进一步说明：
-射线![image](https://cdn.nlark.com/yuque/__latex/9a2d07a64e91b86ded2051e05d00d097.svg)可以理解为相机![image](https://cdn.nlark.com/yuque/__latex/2443fbcfeb7e85e1d62b6f5e4f27207e.svg)坐标系下一三维点![image](https://cdn.nlark.com/yuque/__latex/ec98ba941ef051ee8ca999e8282e8f4f.svg)进行 L2 归一化的单位向量，即![image](https://cdn.nlark.com/yuque/__latex/7d222616924d534560ab5531147246eb.svg)。
+射线![image](https://cdn.nlark.com/yuque/__latex/9a2d07a64e91b86ded2051e05d00d097.svg)可以理解为相机![image](https://cdn.nlark.com/yuque/__latex/2443fbcfeb7e85e1d62b6f5e4f27207e.svg)坐标系下一系列三维点![image](https://cdn.nlark.com/yuque/__latex/ec98ba941ef051ee8ca999e8282e8f4f.svg)进行 L2 归一化的单位向量集合，即 set{![image](https://cdn.nlark.com/yuque/__latex/7d222616924d534560ab5531147246eb.svg)}。
 
 ```python
 # MASt3R-SLAM/mast3r_slam/matching.py L25-L49
@@ -201,7 +201,7 @@ def prep_for_iter_proj(X11, X21, idx_1_to_2_init):
 
     # 构建光线图像（归一化后的3D点云）
     # 对输入的3D点进行L2归一化
-    rays_img = F.normalize(X11, dim=-1) # (b,h,w,c=[x,y,z]) ,dim = -1, 将最后一个维度归一化
+    rays_img = F.normalize(X11, dim=-1) # (b,h,w,c=[x,y,z]) ,dim = -1, 根据最后一个维度归一化
     # 重新排列维度为(batch, channels, height, width)格式
     rays_img = rays_img.permute(0, 3, 1, 2)  # (b,c,h,w)
     # 计算光线图像的梯度（x和y方向）
@@ -238,8 +238,7 @@ _对应关系 _是 SLAM 的一个基本组成部分，同时被跟踪和建图�
 
 > _对应关系_：这里的对应关系是指同一相机![image](https://cdn.nlark.com/yuque/__latex/2443fbcfeb7e85e1d62b6f5e4f27207e.svg)坐标下图像![image](https://cdn.nlark.com/yuque/__latex/190a077310286086074db80e583b7e1e.svg)之间像素坐标的对应关系。
 >
-> MASt3R 只能获取两组三维点及其对应的两组像素点，**但是并无法获得这两组像素点之间的对应关系**。  
-可能会有一个比较直接的想法，即这两组三维点均在相机![image](https://cdn.nlark.com/yuque/__latex/4dd004c812cd8d82d0efed94734dd4da.svg)坐标系下，那么这两组中共视的那部分三维点坐标<u>理应</u>相同，那么可以通过投影公式找到对应的像素坐标，从而得到匹配关系。但是 MASt3R 得到的**共视的那部分三维点坐标并不完全相同**，会存在一定的误差值，从而导致上述的方法失效。
+> MASt3R 只能获取两组三维点及其对应的两组像素点，**但是并无法获得这两组像素点之间的对应关系**。
 >
 
 朴素的暴力匹配具有二次复杂度，因为它是对所有可能的像素对进行全局搜索。为了避免这种情况，<u>DUSt3R</u> 在三维点上使用<u> k‐d 树</u>；然而，构建过程不易并行化，并且如果点云图预测存在误差，3D 中的最近邻搜索会找到许多不准确的匹配。
@@ -592,7 +591,7 @@ SLAM 的一个关键组成部分是对当前帧位姿相对于地图的低延迟
 
 尽管 3D 点误差是合适的，但它很容易受到_点云图预测误差 _的影响，因为<u>深度预测不一致</u>的情况相对频繁。 鉴于我们最终将所有预测融合到一个单独的点云图中取平均，跟踪中的误差会降低关键帧点云图的质量，而这些点云图也会在后端使用。
 
-> _点云图预测误差_：这里是指 <u>MASt3R</u> 输出点云图![image](https://cdn.nlark.com/yuque/__latex/f1e532d342cf994ee61388fa8ef3745c.svg)产生的误差，这是由于 <u>MASt3R</u>  的点图预测（尤其深度估计）在不同帧中可能不一致。
+> _点云图预测误差_：这里是指 <u>MASt3R</u> 输出点云图![image](https://cdn.nlark.com/yuque/__latex/f1e532d342cf994ee61388fa8ef3745c.svg)产生的误差，这是由于 <u>MASt3R</u>  的点图预测（尤其深度估计）在不同帧中可能不一致。（可以有两种理解：同一相机坐标系下不同图像的“相交”点云存在误差；不同相机坐标系下同一张图像预测的点云存在误差）
 >
 
 通过再次利用点云图预测可以在中心相机假设下转换为射线的特性，我们可以计算方向射线误差（directional ray error）来代替，<u>这种误差对不正确的深度预测不那么敏感</u>。为了计算这个误差，我们简单地将公式 (4) 中的两点都进行归一化：     
@@ -693,9 +692,9 @@ def solve(self, sqrt_info, r, J):
         cost = 0.5 * (b.T @ b).item()
 
         L = torch.linalg.cholesky(H, upper=False)
-        tau_j = torch.cholesky_solve(g, L, upper=False).view(1, -1)
+        tau_j = torch.cholesky_solve(g, L, upper=False).view(1, -1) 
 
-        return tau_j, cost
+        return tau_j, cost # Δx，Δr
 ```
 
 由于每个点云图都可能提供有价值的新信息，我们利用这一点，不仅对几何估计进行滤波，还对相机模型本身进行滤波，因为它是由射线定义的。在求解出相对位姿后，我们可以使用变换![image](https://cdn.nlark.com/yuque/__latex/bded59ae244ebb0474740d71459ca117.svg)并通过运行 <u>加权平均滤波器</u>（running weighted average filter）更新规范点云图![image](https://cdn.nlark.com/yuque/__latex/1949fc953c4e93dc18b1de80cfe04cdc.svg)：
@@ -751,7 +750,7 @@ def solve(self, sqrt_info, r, J):
         new_kf = min(match_frac_k, unique_frac_f) < self.cfg["match_frac_thresh"]
 ```
 
-为了闭合（解决）小型和大型的回环（loops），我们采用了 MASt3R-SfM [10] 使用的 聚合选择性匹配核（Aggregated Selective Match Kernel, ASMK）_[46, 47]_ 框架，该框架用于从编码特征中检索图像。虽然这个方法以前是在所有图像都可用的批处理设置（batch setting）中使用，但我们对其进行了修改，使其能够增量地工作。
+为了闭合（解决）小型和大型的回环（loops），我们采用了 MASt3R-SfM [10] 使用的 聚合选择性匹配核（Aggregated Selective Match Kernel, ASMK）_[46, 47]_ 框架，<u>该框架用于从编码特征中检索图像</u>。虽然这个方法以前是在所有图像都可用的批处理设置（batch setting）中使用，但我们对其进行了修改，使其能够增量地工作。
 
 > _[46, 47] _ To aggregate or not to aggregate: Selective match kernels for image search（ICCV 2013）； Learning and aggregating deep local descriptors for instance-level recognition (ECCV 2020)  ： 前者提出了 **Selective Match Kernels (SMK)** 的概念，用于图像检索（image retrieval）；后者在此基础上在 **深度学习特征** 的背景下改进局部特征聚合方法。  
 >
@@ -2436,6 +2435,11 @@ Q.packed_accessor32<float,3,torch::RestrictPtrTraits>(),          // 匹配质�
 
 我们在配备 Intel Core i9 12900K 3.50GHz 的台式机和单块英伟达 GeForce RTX 4090 上运行系统。由于系统以约 15 帧率运行，我们对数据集的<u>每 2 帧</u>进行子采样以模拟实时性能。注意，我们使用来自 MASt3R 的全分辨率输出，该输出将最大维度调整为 512 大小。
 
+> _每两帧_：处理一帧跳一帧。
+>
+> 系统初始化时用 1 帧图像进行初始化（同一帧图像 copy 一份交给 MASt3R）；后续跟踪基于当前帧和最近关键帧交给 MASt3R 进行处理。
+>
+
 ### Camera Pose Estimation
 <u>对于所有数据集，我们报告以米为单位的绝对轨迹误差 (ATE) 的均方根误差 (RMSE)。由于所有系统均为单目，我们执行缩放轨迹对齐。我们将未使用已知标定的系统表示为 Ours*。</u>
 
@@ -2462,7 +2466,8 @@ Q.packed_accessor32<float,3,torch::RestrictPtrTraits>(),          // 匹配质�
 
 > **横轴 (ATE [m])**：表示系统重建轨迹与真实轨迹的平均位置误差（单位为米）。越小越好。    
 **纵轴 (# Successful Datasets)**：表示在<u>误差小于某个 ATE 阈值</u>时，算法成功重建的数据集数量。越高越好。   
-曲线越“靠左靠上”，代表算法越优秀。   
+曲线越“靠左靠上”，代表算法越优秀。     
+这里横纵轴总乘积约为 0.5*55 = 27.5，所以 AUC 取值范围大概在 [0, 27.5]
 >
 
 **ETH3D-SLAM**：由于该数据集的难度，ETH3D‐SLAM 此前仅针对 RGB‐D 方法进行了评估。由于官方私有评估的<u> ATE 阈值</u>对于单目方法过于严格，我们在训练序列上评估了几种最先进的单目系统，并生成了 ATE 曲线。该数据集包含具有快速相机运动的序列，因此，对于所有方法，我们不对帧进行子采样。尽管其他方法可能具有更精确的轨迹，但我们的方法在鲁棒性方面具有更长的尾部，从而在绝对轨迹误差和曲线下面积 (AUC) 上都取得了最佳结果。
@@ -2522,6 +2527,148 @@ _图1_ 展示了镜面人物上可匹配特征较少的挑战性《公民》 序
 >
 
 我们在_表 4 _中比较匹配方法。我们的并行投影匹配配合特征优化实现了最佳精度，且运行时间显著缩短。在整个像素上进行 MASt3R 匹配耗时 2 秒，而我们的匹配仅需 2 毫秒，使整个系统帧率提升近 40 倍。
+
+> 这里匹配的 Ours + feat 中 feat 论文没提，找到了对应的代码，是对匹配后的像素点进行优化。
+>
+
+```python
+MASt3R-SLAM/mast3r_slam/backend/src/matching_kernels.cu L25-81
+/**
+ * 特征匹配精细化CUDA核函数
+ * 使用多尺度搜索策略，在局部窗口内寻找最佳匹配位置
+ * 通过特征向量内积计算相似度得分，迭代更新搜索中心
+ * 
+ * @param D11 参考图像的特征图 [batch, height, width, feature_dim]
+ * @param D21 查询点的特征向量 [batch, n_points, feature_dim]
+ * @param p1 初始匹配点坐标 [batch, n_points, 2]
+ * @param p1_new 输出的精细化后的匹配点坐标 [batch, n_points, 2]
+ * @param radius 搜索半径（基础半径）
+ * @param dilation_max 最大膨胀系数，用于多尺度搜索
+ */
+template <typename scalar_t>
+__global__ void refine_matches_kernel(
+    const torch::PackedTensorAccessor32<scalar_t,4,torch::RestrictPtrTraits> D11,
+    const torch::PackedTensorAccessor32<scalar_t,3,torch::RestrictPtrTraits> D21,
+    const torch::PackedTensorAccessor32<long,3,torch::RestrictPtrTraits> p1,
+    torch::PackedTensorAccessor32<long,3,torch::RestrictPtrTraits> p1_new,
+    const int radius,
+    const int dilation_max
+    )
+{
+  // 计算当前线程处理的点索引（在batch内的第n个点）
+  const uint64_t n = blockIdx.x * blockDim.x + threadIdx.x;
+  // 计算当前线程处理的batch索引
+  const uint64_t b = blockIdx.y;
+
+  // 获取特征图的尺寸
+  const int h = D11.size(1);  // 图像高度
+  const int w = D11.size(2);  // 图像宽度
+  const int fdim = D11.size(3);  // 特征维度
+
+  // 获取初始匹配点的像素坐标
+  long u0 = p1[b][n][0];  // x坐标
+  long v0 = p1[b][n][1];  // y坐标
+
+  // 初始化最大相似度得分为最小值
+  scalar_t max_score = ::cuda::std::numeric_limits<scalar_t>::min();
+  // 初始化最佳匹配位置为初始位置
+  long u_new = u0;
+  long v_new = v0;
+
+  // 多尺度搜索：从大尺度到小尺度（coarse-to-fine）
+  for (int d=dilation_max; d>0; d--) {
+    // 计算当前尺度的搜索半径
+    const int rd = radius*d;
+    // 计算搜索窗口的直径
+    const int diam = 2*rd + 1;
+    // 在搜索窗口内遍历，步长为d（膨胀采样）
+    for (int i=0; i<diam; i+=d) {
+      for (int j=0; j<diam; j+=d) {
+        // 计算候选匹配点的坐标（以u0,v0为中心）
+        const long u = u0 - rd + i;
+        const long v = v0 - rd + j;
+
+        // 检查候选点是否在图像范围内
+        if (inside_image(u, v, w, h)) {
+          // 初始化当前候选点的相似度得分
+          scalar_t score = 0.0;
+          // 计算特征向量内积（余弦相似度）
+          for (int k=0; k<fdim; k++) {
+            score += D21[b][n][k] * D11[b][v][u][k];
+          }
+
+          // 如果当前得分更高，更新最佳匹配位置
+          if (score > max_score) {
+            max_score = score;
+            u_new = u;
+            v_new = v;
+          }
+    
+        }
+      }
+    }
+    // 将搜索中心更新到上一次迭代找到的最佳位置
+    u0 = u_new;
+    v0 = v_new;
+  }
+```
+
+```python
+# MASt3R-SLAM/mast3r_slam/backend/src/matching_kernels.cu L83-166
+/**
+ * 特征匹配精细化的CUDA接口函数
+ * 负责配置CUDA网格、分配输出张量、调用核函数
+ * 
+ * @param D11 参考图像的特征图
+ * @param D21 查询点的特征向量
+ * @param p1 初始匹配点坐标
+ * @param radius 搜索半径
+ * @param dilation 膨胀系数（最大尺度）
+ * @return 包含精细化后匹配点坐标的向量
+ */
+std::vector<torch::Tensor> refine_matches_cuda(
+    torch::Tensor D11,
+    torch::Tensor D21,
+    torch::Tensor p1,
+    const int radius,
+    const int dilation)
+{
+  // 获取batch大小
+  const auto batch_size = p1.size(0);
+  // 获取点的数量
+  const auto n = p1.size(1);
+
+  // 配置CUDA网格：x维度为点数量，y维度为batch大小
+  const dim3 blocks((n + BLOCK - 1) / BLOCK, 
+                    batch_size);
+  
+  // 配置CUDA线程块：每个块有BLOCK个线程
+  const dim3 threads(BLOCK);
+
+  // 获取输入张量的配置选项（设备、数据类型等）
+  auto opts = p1.options();
+  // 分配输出张量，存储精细化后的匹配点坐标
+  torch::Tensor p1_new = torch::zeros(
+    {batch_size, n, 2}, opts);
+
+  // 根据D11的数据类型分派相应的核函数模板实例（支持float、double、half）
+  AT_DISPATCH_FLOATING_TYPES_AND_HALF(D11.type(), "refine_matches_kernel", ([&] {
+    // 调用CUDA核函数进行匹配精细化
+    refine_matches_kernel<scalar_t><<<blocks, threads>>>(
+      D11.packed_accessor32<scalar_t,4,torch::RestrictPtrTraits>(),
+      D21.packed_accessor32<scalar_t,3,torch::RestrictPtrTraits>(),
+      p1.packed_accessor32<long,3,torch::RestrictPtrTraits>(),
+      p1_new.packed_accessor32<long,3,torch::RestrictPtrTraits>(),
+      radius,
+      dilation
+    );
+   }));
+
+  // 返回精细化后的匹配点坐标
+  return {p1_new};
+
+}
+```
 
 ![](https://cdn.nlark.com/yuque/0/2025/png/45861457/1762827030695-8d54dfff-609a-4a8b-a5d8-42f152e83d75.png)
 
@@ -2768,6 +2915,206 @@ wget https://download.europe.naverlabs.com/ComputerVision/MASt3R/MASt3R_ViTLarge
 scripts 里面的 bash 脚本链接过时，需到官网手动下载，以 TUM RGBD 为例：
 
 在官网 [https://cvg.cit.tum.de/data/datasets/rgbd-dataset/download](https://cvg.cit.tum.de/data/datasets/rgbd-dataset/download) 下载 scripts/download_tum.sh 中所需数据集并解压，注意保持路径为 datasets/tum
+
+## 运行解析
+```python
+# MASt3R-SLAM/main.py L145-L335
+if __name__ == "__main__":                     # 主入口
+    mp.set_start_method("spawn")               # 多进程启动方式设为 spawn（跨平台更安全）
+    torch.backends.cuda.matmul.allow_tf32 = True  # 允许 TF32 加速矩阵计算
+    torch.set_grad_enabled(False)              # 推理模式，不需要梯度
+    device = "cuda:0"                          # 默认使用第一个 GPU
+    save_frames = False                        # 是否保存所有处理过的图像帧
+    datetime_now = str(datetime.datetime.now()).replace(" ", "_")  # 时间戳用于保存目录名
+
+    parser = argparse.ArgumentParser()         # 定义命令行参数解析器
+    parser.add_argument("--dataset", default="datasets/tum/rgbd_dataset_freiburg1_desk")  # 数据集路径
+    parser.add_argument("--config", default="config/base.yaml")    # 主配置文件
+    parser.add_argument("--save-as", default="default")            # 保存结果文件名后缀
+    parser.add_argument("--no-viz", action="store_true")           # 是否禁用可视化
+    parser.add_argument("--calib", default="")                     # 可选外部相机标定文件路径
+
+    args = parser.parse_args()                                    # 解析参数
+
+    load_config(args.config)                                      # 加载配置文件
+    print(args.dataset)                                           # 打印数据集路径
+    print(config)                                                 # 打印加载后的配置
+
+    manager = mp.Manager()                                        # 多进程共享内存管理器
+    main2viz = new_queue(manager, args.no_viz)                    # 主线程到可视化进程的消息队列
+    viz2main = new_queue(manager, args.no_viz)                    # 可视化到主线程的消息队列
+
+    dataset = load_dataset(args.dataset)                          # 加载 SLAM 数据集
+    dataset.subsample(config["dataset"]["subsample"])             # 按配置对数据集降采样
+    h, w = dataset.get_img_shape()[0]                             # 获取图像高度、宽度（只要第一帧）
+
+    if args.calib:                                                # 如果提供外部标定文件
+        with open(args.calib, "r") as f:
+            intrinsics = yaml.load(f, Loader=yaml.SafeLoader)     # 加载外参数据
+        config["use_calib"] = True                                # 配置中标记使用标定
+        dataset.use_calibration = True                            # 数据集内部也标记使用标定
+
+        dataset.camera_intrinsics = Intrinsics.from_calib(        # 初始化相机内参对象
+            dataset.img_size,
+            intrinsics["width"],
+            intrinsics["height"],
+            intrinsics["calibration"],
+        )
+
+    keyframes = SharedKeyframes(manager, h, w)                    # 存储关键帧的共享结构
+    states = SharedStates(manager, h, w)                          # 全局 SLAM 状态（tracking / reloc 等）
+
+    if not args.no_viz:                                           # 若启用可视化
+        viz = mp.Process(                                         # 创建可视化进程
+            target=run_visualization,
+            args=(config, states, keyframes, main2viz, viz2main),
+        )
+        viz.start()                                               # 启动可视化进程
+
+    model = load_mast3r(device=device)                            # 加载 MASt3R 视觉模型
+    model.share_memory()                                          # 允许模型权重在多进程间共享
+
+    has_calib = dataset.has_calib()                               # 数据集是否自带相机标定
+    use_calib = config["use_calib"]                               # 配置是否要求标定
+
+    if use_calib and not has_calib:                               # 如果需要标定但数据集没有
+        print("[Warning] No calibration provided for this dataset!")
+        sys.exit(0)                                               # 强制退出，避免错误运行
+
+    K = None
+    if use_calib:                                                 # 如果有外参
+        K = torch.from_numpy(dataset.camera_intrinsics.K_frame).to(
+            device, dtype=torch.float32
+        )                                                         # 相机内参矩阵转成 tensor
+        keyframes.set_intrinsics(K)                               # 设置给关键帧共享结构
+
+    # 如果之前已有保存结果（轨迹/点云），先清除
+    if dataset.save_results:
+        save_dir, seq_name = eval.prepare_savedir(args, dataset)
+        traj_file = save_dir / f"{seq_name}.txt"                  # 保存轨迹路径
+        recon_file = save_dir / f"{seq_name}.ply"                 # 保存重建路径
+        if traj_file.exists():
+            traj_file.unlink()                                    # 删除旧轨迹文件
+        if recon_file.exists():
+            recon_file.unlink()                                   # 删除旧点云文件
+
+    tracker = FrameTracker(model, keyframes, device)              # 初始化前端追踪器
+    last_msg = WindowMsg()                                        # 可视化窗口消息
+
+    backend = mp.Process(target=run_backend, args=(config, model, states, keyframes, K))
+    backend.start()                                               # 启动后端优化线程
+
+    i = 0                                                         # 当前帧计数器
+    fps_timer = time.time()                                       # 计算 FPS 用
+
+    frames = []                                                   # 保存原始图像帧（可选）
+
+    while True:
+        mode = states.get_mode()                                  # 当前 SLAM 状态（INIT / TRACKING / RELOC）
+        msg = try_get_msg(viz2main)                               # 可视化传来的消息
+        last_msg = msg if msg is not None else last_msg
+
+        if last_msg.is_terminated:                                # 如果窗口发来退出指令
+            states.set_mode(Mode.TERMINATED)
+            break
+
+        if last_msg.is_paused and not last_msg.next:              # 如果暂停并且不是下一帧
+            states.pause()
+            time.sleep(0.01)
+            continue
+
+        if not last_msg.is_paused:                                # 如果恢复播放
+            states.unpause()
+
+        if i == len(dataset):                                     # 若已处理完所有帧
+            states.set_mode(Mode.TERMINATED)
+            break
+
+        timestamp, img = dataset[i]                               # 取出当前帧
+        if save_frames:
+            frames.append(img)                                    # 可选：保存图像帧
+
+        T_WC = (                                                  # 当前帧的初始位姿
+            lietorch.Sim3.Identity(1, device=device)
+            if i == 0 else states.get_frame().T_WC
+        )
+
+        frame = create_frame(i, img, T_WC, img_size=dataset.img_size, device=device)
+
+        if mode == Mode.INIT:                                     # -----------初始化阶段-----------
+            X_init, C_init = mast3r_inference_mono(model, frame)  # MASt3R 单目初始化（同一帧传给 MASt3R 输出）
+            frame.update_pointmap(X_init, C_init)                 # 更新 frame 的点云与颜色
+            keyframes.append(frame)                               # 将首帧加入关键帧
+            states.queue_global_optimization(len(keyframes) - 1)  # 通知后端优化
+            states.set_mode(Mode.TRACKING)                        # 切换到追踪模式
+            states.set_frame(frame)
+            i += 1
+            continue
+
+        if mode == Mode.TRACKING:                                # -----------正常追踪-----------
+            add_new_kf, match_info, try_reloc = tracker.track(frame)
+            if try_reloc:                                         # 如果跟踪失败，进入 RELOC
+                states.set_mode(Mode.RELOC)
+            states.set_frame(frame)
+
+        elif mode == Mode.RELOC:                                 # -----------重定位-----------
+            X, C = mast3r_inference_mono(model, frame)            # 再跑一次单目推理重定位
+            frame.update_pointmap(X, C)
+            states.set_frame(frame)
+            states.queue_reloc()
+
+            while config["single_thread"]:                        # 若单线程模式需等待重定位结束
+                with states.lock:
+                    if states.reloc_sem.value == 0:
+                        break
+                time.sleep(0.01)
+
+        else:
+            raise Exception("Invalid mode")                       # 逻辑错误保护
+
+        if add_new_kf:                                            # 如果需要增加关键帧
+            keyframes.append(frame)
+            states.queue_global_optimization(len(keyframes) - 1)  # 通知后端优化
+
+            while config["single_thread"]:                        # 单线程模式下需阻塞等待
+                with states.lock:
+                    if len(states.global_optimizer_tasks) == 0:
+                        break
+                time.sleep(0.01)
+
+        if i % 30 == 0:                                           # 每 30 帧打印一次 FPS
+            FPS = i / (time.time() - fps_timer)
+            print(f"FPS: {FPS}")
+
+        i += 1                                                     # 进入下一帧
+
+    # ---------------- 运行结束后保存轨迹与重建 ----------------
+    if dataset.save_results: # 默认存到 logs 文件夹下
+        save_dir, seq_name = eval.prepare_savedir(args, dataset)
+        eval.save_traj(save_dir, f"{seq_name}.txt", dataset.timestamps, keyframes)
+        eval.save_reconstruction(
+            save_dir,
+            f"{seq_name}.ply",
+            keyframes,
+            last_msg.C_conf_threshold,
+        )
+        eval.save_keyframes(
+            save_dir / "keyframes" / seq_name, dataset.timestamps, keyframes
+        )
+
+    if save_frames:                                               # 若需保存图像序列
+        savedir = pathlib.Path(f"logs/frames/{datetime_now}")
+        savedir.mkdir(exist_ok=True, parents=True)
+        for i, frame in tqdm.tqdm(enumerate(frames), total=len(frames)):
+            frame = (frame * 255).clip(0, 255)
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(f"{savedir}/{i}.png", frame)
+
+    print("done")                                                 # 完成流程
+    backend.join()                                                # 等待后端退出
+    if not args.no_viz:
+        viz.join()                                                # 等待可视化进程退出
+```
 
 ## 测试样例
 以本地录制视频 331.mp4 为例：（Out of Memory 了，暂时跑不了，之前跑出来了忘截图了......）
